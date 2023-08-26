@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from config.settings import Settings
 from fastapi.middleware.cors import CORSMiddleware
+from routers.main import router
 
 settings = Settings()
 
@@ -35,6 +36,6 @@ app.add_middleware(
 
 
 # Root test route
-@app.get("/", status_code=200)
-async def root():
-    return {"message": "Hello World"}
+
+
+app.include_router(router, prefix="/api/v1")
