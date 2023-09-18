@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-from config.settings import Settings
+from lib.config.settings import get_settings
 from fastapi.middleware.cors import CORSMiddleware
 from routers.main import router
 
-settings = Settings()
+settings = get_settings()
 
 
 app = FastAPI(
