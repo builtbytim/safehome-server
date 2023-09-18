@@ -1,14 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from urllib.parse import quote
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import EmailStr
 from lib.config.settings import get_settings
 from models.users import *
 from lib.db import _db, Collections
 from lib.utils.pure_functions import *
 from lib.utils.security import scrypt_hash
 from lib.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
+from lib.huey_tasks.tasks import task_send_mail
+from lib.utils.security import generate_totp, validate_totp, simple_encrypt
+import datetime
 
-from lib.utils.security import generate_totp, validate_totp
+
+TODAY = datetime.datetime.now().day
 
 
 settings = get_settings()
@@ -62,17 +66,12 @@ async def email_verify(body: RequestEmailOrSMSVerificationInput):
 
     # send email
 
+    url = f"{settings.app_url}/verify-email/{user.email}?uid={uid}&token={ quote(simple_encrypt(otp, TODAY ))}"
+
+    task_send_mail(
+        "verify_email", user.email, {"otp": otp, "url": url})
+
     return RequestEmailOrSMSVerificationOutput(uid=uid, channel=Channels.EMAIL, pk=user.email)
-
-    # elif body.channel == Channels.SMS:
-    #     if user.phone_verified:
-    #         raise HTTPException(400, "phone number already verified")
-
-    #     otp, uid = await generate_totp(ActionIdentifiers.VERIFY_PHONE, user.uid)
-
-    #     # send sms
-
-    #     return RequestEmailOrSMSVerificationOutput(uid=uid, channel=Channels.SMS, pk=user.phone)
 
 
 @router.post("/emails/confirm", status_code=200)
