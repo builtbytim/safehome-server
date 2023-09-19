@@ -2,9 +2,9 @@ import phonenumbers
 from pydantic import BaseModel, Field, EmailStr, validator, HttpUrl
 from enum import Enum
 from typing import Union
-from lib.utils.pure_functions import *
+from libs.utils.pure_functions import *
 from time import time
-from lib.config.settings import get_settings
+from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
 
 

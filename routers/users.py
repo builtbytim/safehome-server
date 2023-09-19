@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.security import OAuth2PasswordRequestForm
-from lib.config.settings import get_settings
+from libs.config.settings import get_settings
 from models.users import *
-from lib.db import _db, Collections
-from lib.utils.pure_functions import *
-from lib.utils.security import scrypt_hash
-from lib.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
-from lib.huey_tasks.tasks import task_send_mail
-from lib.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
-from lib.deps.users import get_user_by_email
+from libs.db import _db, Collections
+from libs.utils.pure_functions import *
+from libs.utils.security import scrypt_hash
+from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
+from libs.huey_tasks.tasks import task_send_mail
+from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
+from libs.deps.users import get_user_by_email
 
 
 settings = get_settings()
