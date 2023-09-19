@@ -7,8 +7,8 @@ from lib.utils.pure_functions import *
 from lib.utils.security import scrypt_hash
 from lib.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
 from lib.huey_tasks.tasks import task_send_mail
-from lib.utils.security import generate_totp, validate_totp, encode_to_base64
-import datetime
+from lib.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
+from lib.deps.users import get_user_by_email
 
 
 settings = get_settings()
@@ -83,8 +83,45 @@ async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
     is_valid = totp_obj.verify(body.token)
 
     if not is_valid:
-        raise HTTPException(400, "Invalid Code Detected")
+        raise HTTPException(400, "Invalid Code")
 
     user.email_verified = True
+    user.is_active = True
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+
+@router.post("/sign-in", response_model=AccessToken)
+async def sign_in(body:  RequestAccessTokenInput):
+
+    user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.email, raise_404=False)
+
+    if user is None:
+        raise HTTPException(401, "Account does not exist.")
+
+    if not user.email_verified:
+        raise HTTPException(
+            400, "Account not verified, please verify your email.", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL"})
+
+    if not user.is_active:
+        raise HTTPException(
+            400, "Account is not active, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL"})
+
+    is_correct_password = scrypt_verify(
+        body.password, user.password_hash, user.uid)
+
+    if not is_correct_password:
+        raise HTTPException(401, "Invalid credentials")
+
+    user.last_login = user.true_last_login
+    user.true_last_login = get_utc_timestamp()
+
+    # Create new auth session
+
+    token = await _create_access_token(user.uid)
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+    return {
+        "access_token": token,
+    }

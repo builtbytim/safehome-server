@@ -32,6 +32,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
     max_age=3600,
+    expose_headers=["X-ACTION", "WWW-Authenticate"],
+
+
 
 )
 
