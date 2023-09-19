@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     otp_length: int = 6
     bearer_header_name:  str = ""
     password_salt: str = "passwordsalt"
+    jwt_access_token_expiration_hours: int = 24
+    jwt_secret_key: str = "jwtsecretkey"
     kek: str = "kek"
     kek1: str = "kek1"
     kek2: str = "kek2"

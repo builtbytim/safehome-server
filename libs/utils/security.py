@@ -38,7 +38,7 @@ def _decode_jwt_token(token: str):
     try:
 
         decoded = jwt.decode(token, settings.jwt_secret_key, algorithms='HS256',
-                             issuer=settings.app_id, options={"require": ["exp", "iss", "sub", "iat"]})
+                             issuer=settings.app_name, options={"require": ["exp", "iss", "sub", "iat"]})
 
         return decoded
 
@@ -69,7 +69,7 @@ async def _create_access_token(user_id: str):
             "session_id": session_id,
         },
         "exp": datetime.now(tz=timezone.utc) + timedelta(hours=settings.jwt_access_token_expiration_hours),
-        "iss":  settings.app_id,
+        "iss":  settings.app_name,
         "iat": datetime.now(tz=timezone.utc)
     }
 
@@ -115,7 +115,7 @@ def scrypt_verify(guessed_password: str,  expected_hash: str, salt: str, n: int 
         return True
 
     except InvalidKey:
-        raise HTTPException(401, "invalid credentials")
+        return False
 
     except Exception as e:
         raise HTTPException(500, str(e))

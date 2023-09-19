@@ -111,7 +111,7 @@ async def sign_in(body:  RequestAccessTokenInput):
         body.password, user.password_hash, user.uid)
 
     if not is_correct_password:
-        raise HTTPException(401, "Invalid credentials")
+        raise HTTPException(401, "Invalid Credentials. ")
 
     user.last_login = user.true_last_login
     user.true_last_login = get_utc_timestamp()
