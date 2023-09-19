@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from urllib.parse import quote
 from fastapi.security import OAuth2PasswordRequestForm
 from lib.config.settings import get_settings
 from models.users import *
@@ -8,11 +7,8 @@ from lib.utils.pure_functions import *
 from lib.utils.security import scrypt_hash
 from lib.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
 from lib.huey_tasks.tasks import task_send_mail
-from lib.utils.security import generate_totp, validate_totp, simple_encrypt
+from lib.utils.security import generate_totp, validate_totp, encode_to_base64
 import datetime
-
-
-TODAY = datetime.datetime.now().day
 
 
 settings = get_settings()
@@ -66,7 +62,7 @@ async def email_verify(body: RequestEmailOrSMSVerificationInput):
 
     # send email
 
-    url = f"{settings.app_url}/verify-email/{user.email}?uid={uid}&token={ quote(simple_encrypt(otp, TODAY ))}"
+    url = f"{settings.app_url}/verify-email/{user.email}?uid={uid}&token={encode_to_base64(otp)}"
 
     task_send_mail(
         "verify_email", user.email, {"otp": otp, "url": url})
@@ -87,26 +83,8 @@ async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
     is_valid = totp_obj.verify(body.token)
 
     if not is_valid:
-        raise HTTPException(400, "invalid otp")
+        raise HTTPException(400, "Invalid Code Detected")
 
     user.email_verified = True
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
-
-    # elif body.channel == Channels.SMS:
-
-    #     user: UserDBModel = await find_record(UserDBModel, Collections.users, "phone", body.foreign_key, raise_404=True)
-
-    #     if user.phone_verified:
-    #         raise HTTPException(400, "phone number already verified")
-
-    #     totp_obj, _ = await validate_totp(body.uid)
-
-    #     is_valid = totp_obj.verify(body.otp)
-
-    #     if not is_valid:
-    #         raise HTTPException(400, "invalid otp")
-
-    #     user.phone_verified = True
-
-    #     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
