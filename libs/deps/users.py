@@ -12,7 +12,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/v1/users/oauth2-password-request-form", auto_error=False)
+    tokenUrl="/api/v1/users/sign-in")
 
 settings = get_settings()
 
@@ -20,7 +20,7 @@ settings = get_settings()
 async def __get_auth_context(bg_tasks, token):
     if not token:
         raise HTTPException(
-            401, "unauthenticated request : no authorization header present")
+            401, "unauthenticated request : no authorization header present", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
 
     payload = _decode_jwt_token(token)
 
@@ -29,7 +29,8 @@ async def __get_auth_context(bg_tasks, token):
     user = await _db[Collections.users].find_one({"uid": user_id})
 
     if not user:
-        raise HTTPException(401, f"unauthenticated request : user not found ")
+        raise HTTPException(401, f"unauthenticated request : user not found ", headers={
+                            "WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
 
     session_id = payload["sub"]["session_id"]
 
@@ -37,24 +38,24 @@ async def __get_auth_context(bg_tasks, token):
 
     if not auth_session:
         raise HTTPException(
-            401, f"unauthenticated request : session not found ")
+            401, f"unauthenticated request : session not found ", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
 
     session = AuthSession(**auth_session)
 
     if user_id != session.user_id:
         raise HTTPException(
-            401, f"unauthenticated request :  user id mismatch ")
+            401, f"unauthenticated request :  user id mismatch ", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
 
     if not session.is_valid:
         raise HTTPException(
-            401, f"unauthenticated request :  session invalidated ")
+            401, f"unauthenticated request :  session invalidated ", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
 
     session_created = datetime.fromtimestamp(session.created, timezone.utc)
     utc_now = datetime.now(tz=timezone.utc)
 
     if utc_now >= session_created + timedelta(hours=session.duration_in_hours):
         raise HTTPException(
-            401, f"unauthenticated request :  session expired ")
+            401, f"unauthenticated request :  session expired ", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
 
     session.last_used = get_utc_timestamp()
     session.usage_count += 1

@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     mail_domain_username:  str = "admin"
     otp_interval: int = 300  # seconds
     otp_length: int = 6
-    bearer_header_name:  str = ""
+    bearer_header_name:  str = "Bearer"
     password_salt: str = "passwordsalt"
     jwt_access_token_expiration_hours: int = 24
     jwt_secret_key: str = "jwtsecretkey"

@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, Form
 from libs.config.settings import get_settings
 from models.users import *
 from libs.db import _db, Collections
@@ -8,7 +7,8 @@ from libs.utils.security import scrypt_hash
 from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
 from libs.huey_tasks.tasks import task_send_mail
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
-from libs.deps.users import get_user_by_email
+from libs.deps.users import get_user_by_email, get_auth_context
+from fastapi.security import OAuth2PasswordRequestForm
 
 
 settings = get_settings()
@@ -92,9 +92,9 @@ async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
 
 
 @router.post("/sign-in", response_model=AccessToken)
-async def sign_in(body:  RequestAccessTokenInput):
+async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
 
-    user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.email, raise_404=False)
+    user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.username, raise_404=False)
 
     if user is None:
         raise HTTPException(401, "Account does not exist.")
@@ -125,3 +125,8 @@ async def sign_in(body:  RequestAccessTokenInput):
     return {
         "access_token": token,
     }
+
+
+@router.get("/session", response_model=AuthenticationContext, response_model_by_alias=True)
+async def get_session(ctx:  AuthenticationContext = Depends(get_auth_context)):
+    return ctx
