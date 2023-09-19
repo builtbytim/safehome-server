@@ -1,9 +1,17 @@
 from fastapi import FastAPI
-from lib.config.settings import get_settings
 from fastapi.middleware.cors import CORSMiddleware
 from routers.main import router
 from lib.huey_tasks.config import huey
+from lib.config.settings import get_settings
 from lib.huey_tasks.tasks import task_send_mail, task_test_huey
+import os
+
+# Get the current script's directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Set the project root as the parent directory of the current script
+project_root = os.path.dirname(current_dir)
+
 
 settings = get_settings()
 
