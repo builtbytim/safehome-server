@@ -3,6 +3,7 @@ from lib.config.settings import get_settings
 from fastapi.middleware.cors import CORSMiddleware
 from routers.main import router
 from lib.huey_tasks.config import huey
+from lib.huey_tasks.tasks import task_send_mail, task_test_huey
 
 settings = get_settings()
 
