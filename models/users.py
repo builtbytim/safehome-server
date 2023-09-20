@@ -16,7 +16,7 @@ def passes_phonenumber_test(value):
     """checks whether  a phone number is valid or not"""
 
     try:
-        res = phonenumbers.parse(value)
+        res = phonenumbers.parse(value, "NG")
         return phonenumbers.is_valid_number(res)
     except phonenumbers.NumberParseException:
         return False
