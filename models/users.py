@@ -181,8 +181,8 @@ class UserDBModel(UserBaseModel):
         default=None,  min_length=2, max_length=35)
     country: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
-    avatar_url: Union[HttpUrl, None] = Field(default=None, alias="avatarUrl")
-    kyc_picture: Union[HttpUrl, None] = Field(default=None, alias="kycPicture")
+    avatar_url: Union[str, None] = Field(default=None, alias="avatarUrl")
+    kyc_picture: Union[str, None] = Field(default=None, alias="kycPicture")
     gender: Union[Genders, None] = None
     auth_provider: AuthProviders = Field(
         default=AuthProviders.DEFAULT, alias="authProvider")

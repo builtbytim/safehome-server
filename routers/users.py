@@ -143,7 +143,7 @@ async def sign_out(auth_context:  AuthenticationContext = Depends(get_auth_conte
 
 
 @router.post("/kyc/id", status_code=200, response_model=IdentityDocument, response_model_by_alias=True)
-async def kyc_id(document_type:  DocumentTypes = Form(...), document_number:  str | None = Form(default=None), file: UploadFile = File(...),  auth_context:  AuthenticationContext = Depends(get_auth_context), ):
+async def kyc_id(document_type:  DocumentTypes = Form(alias='documentType'), document_number:  str | None = Form(default=None, alias="documentNumber"), file: UploadFile = File(...),  auth_context:  AuthenticationContext = Depends(get_auth_context), ):
     user = auth_context.user
 
     if user.kyc_id is not None and user.kyc_id_verified:
