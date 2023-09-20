@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Form
+from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
 from libs.config.settings import get_settings
 from models.users import *
 from libs.db import _db, Collections
@@ -96,7 +96,7 @@ async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
 @router.post("/sign-in", response_model=AccessToken)
 async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
 
-    user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.username, raise_404=False)
+    user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.username.lower(), raise_404=False)
 
     if user is None:
         raise HTTPException(401, "Account does not exist.")
@@ -139,7 +139,9 @@ async def sign_out(auth_context:  AuthenticationContext = Depends(get_auth_conte
 
     auth_context.session.is_valid = False
 
-    await update_record(AuthSession, auth_context.session.model_dump(), Collections.sessions, "uid")
+    await update_record(AuthSession, auth_context.session.model_dump(), Collections.authsessions, "uid")
+
+    # await update_record(UserDBModel, auth_context.user.model_dump(), Collections.users, "uid")
 
 
 @router.post("/kyc/id", status_code=200, response_model=IdentityDocument, response_model_by_alias=True)

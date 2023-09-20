@@ -60,8 +60,13 @@ async def __get_auth_context(bg_tasks, token):
     session.last_used = get_utc_timestamp()
     session.usage_count += 1
 
-    bg_tasks.add_task(update_record, AuthSession,
-                      session.model_dump(), Collections.authsessions, "uid")
+    async def make_update(uid, last_used, usage_count):
+
+        await _db[Collections.authsessions].update_one(
+            {"uid": uid}, {"$set": {"last_used": last_used, "usage_count": usage_count}})
+
+    bg_tasks.add_task(make_update, session.uid,
+                      session.last_used, session.usage_count)
 
     return AuthenticationContext(
         session=session, user=UserDBModel(**user)

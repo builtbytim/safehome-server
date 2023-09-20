@@ -1,5 +1,4 @@
-from fastapi import UploadFile, File
-from pydantic import BaseModel, Field, EmailStr, validator, HttpUrl
+from pydantic import BaseModel, Field, EmailStr, validator, constr
 from enum import Enum
 from typing import Union
 from libs.utils.pure_functions import *
@@ -161,8 +160,16 @@ class UserBaseModel(BaseModel):
         min_length=2, max_length=35, alias="firstName")
     last_name: str = Field(
         min_length=2, max_length=35, alias="lastName")
+
     email: EmailStr
-    phone: str = Field(min_length=8, max_length=15)
+
+    phone: str = Field(min_length=10, max_length=15)
+
+    @validator('email', pre=True, always=True)
+    def normalize_email(cls, value):
+        if value is not None:
+            return value.lower()
+        return value
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
