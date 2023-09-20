@@ -6,7 +6,7 @@ from .uploads import router as uploads_router
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("", status_code=200)
 async def root():
     return {"message": "Hello World"}
 
