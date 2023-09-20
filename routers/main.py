@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from .users import router as users_router
+from .uploads import router as uploads_router
 
 
 router = APIRouter()
@@ -11,3 +12,4 @@ async def root():
 
 
 router.include_router(users_router, prefix="/users")
+router.include_router(uploads_router, prefix="/uploads")

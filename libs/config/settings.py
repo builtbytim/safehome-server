@@ -15,6 +15,12 @@ class Settings(BaseSettings):
     log_level: str = "DEBUG"
     app_name: str = "Safehome"
     db_name: str = "Safehome"
+    cloudinary_cloud_name: str = "cloud_name"
+    cloudinary_api_key: str = "api_key"
+    cloudinary_api_secret: str = "api_secret"
+    images_dir: str = "safehome_images"
+    allowed_image_content_types: list[str] = [
+        "image/png", "image/jpeg", "image/gif"]
     dump_mail: str = "dump@Safehome.xyz"
     api_key_header_name: str = "x-Safehome-api"
     tx_reference_prefix: str = "xpnd"

@@ -7,8 +7,10 @@ from libs.utils.security import scrypt_hash
 from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
 from libs.huey_tasks.tasks import task_send_mail
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
+from pydantic import HttpUrl
 from libs.deps.users import get_user_by_email, get_auth_context
 from fastapi.security import OAuth2PasswordRequestForm
+from libs.cloudinary.uploader import upload_image
 
 
 settings = get_settings()
@@ -128,5 +130,51 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
 
 
 @router.get("/session", response_model=AuthenticationContext, response_model_by_alias=True)
-async def get_session(ctx:  AuthenticationContext = Depends(get_auth_context)):
-    return ctx
+async def get_session(auth_context:  AuthenticationContext = Depends(get_auth_context)):
+    return auth_context
+
+
+@router.post("/sign-out", status_code=200)
+async def sign_out(auth_context:  AuthenticationContext = Depends(get_auth_context)):
+
+    auth_context.session.is_valid = False
+
+    await update_record(AuthSession, auth_context.session.model_dump(), Collections.sessions, "uid")
+
+
+@router.post("/kyc/id", status_code=200, response_model=IdentityDocument, response_model_by_alias=True)
+async def kyc_id(document_type:  DocumentTypes = Form(...), document_number:  str | None = Form(default=None), file: UploadFile = File(...),  auth_context:  AuthenticationContext = Depends(get_auth_context), ):
+    user = auth_context.user
+
+    if user.kyc_id is not None and user.kyc_id_verified:
+        raise HTTPException(400, "KYC identity document already verified")
+
+    upload_res = upload_image(file.file, {
+        "folder": f"{settings.images_dir}/{user.uid}"
+    })
+
+    doc = IdentityDocument(
+        document_type=document_type, document_number=document_number, document_url=upload_res["secure_url"], user_id=user.uid)
+
+    user.kyc_id = doc
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+    return doc
+
+
+@router.post("/kyc/picture", status_code=200, )
+async def kyc_picture(file: UploadFile = File(...),  auth_context:  AuthenticationContext = Depends(get_auth_context), ):
+    user = auth_context.user
+
+    if user.kyc_picture is not None and user.kyc_picture_verified:
+        raise HTTPException(400, "KYC picture already verified")
+
+    upload_res = upload_image(file.file, {
+        "folder": f"{settings.images_dir}/{user.uid}"
+    })
+
+    user.kyc_picture = HttpUrl(upload_res["secure_url"]).unicode_string()
+    user.avatar_url = HttpUrl(upload_res["secure_url"]).unicode_string()
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")

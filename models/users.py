@@ -1,4 +1,4 @@
-import phonenumbers
+from fastapi import UploadFile, File
 from pydantic import BaseModel, Field, EmailStr, validator, HttpUrl
 from enum import Enum
 from typing import Union
@@ -6,6 +6,7 @@ from libs.utils.pure_functions import *
 from time import time
 from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
+import phonenumbers
 
 
 settings = get_settings()
@@ -54,6 +55,13 @@ class ActionIdentifiers(str, Enum):
     RESET_PASSWORD_VIA_SMS = "RESET_PASSWORD_VIA_SMS"
     VERIFY_EMAIL = "VERIFY_EMAIL"
     VERIFY_PHONE = "VERIFY__PHONE"
+
+
+class DocumentTypes(str, Enum):
+    PASSPORT = "PASSPORT"
+    NATIONAL_ID = "NATIONAL_ID"
+    DRIVERS_LICENSE = "DRIVERS_LICENSE"
+    OTHER = "OTHER"
 
 
 class QueueStatus(str, Enum):
@@ -125,6 +133,27 @@ class TOTPDB(BaseModel):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
+class IdentityDocumentBase(BaseModel):
+    document_type: DocumentTypes = Field(alias="documentType")
+    document_number: str | None = Field(alias="documentNumber")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class IdentityDocumentInput(IdentityDocumentBase):
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class IdentityDocument(IdentityDocumentBase):
+    user_id: str = Field(alias="userId")
+    uid: str = Field(default_factory=get_uuid4)
+    document_url: str = Field(alias="documentUrl")
+    created_at: float = Field(default_factory=time, alias="createdAt")
+    updated_at: float = Field(default_factory=time, alias="updatedAt")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class UserBaseModel(BaseModel):
 
     """ User Model """
@@ -147,12 +176,13 @@ class UserInputModel(UserBaseModel):
 class UserDBModel(UserBaseModel):
     uid: str = Field(default_factory=get_uuid4)
     role: UserRoles = Field(default=UserRoles.USER)
-
+    kyc_id: IdentityDocument | None = Field(default=None, alias="kycId")
     address: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
     country: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
-    avatarUrl: Union[HttpUrl, None] = Field(default=None)
+    avatar_url: Union[HttpUrl, None] = Field(default=None, alias="avatarUrl")
+    kyc_picture: Union[HttpUrl, None] = Field(default=None, alias="kycPicture")
     gender: Union[Genders, None] = None
     auth_provider: AuthProviders = Field(
         default=AuthProviders.DEFAULT, alias="authProvider")
@@ -161,6 +191,9 @@ class UserDBModel(UserBaseModel):
     is_superuser: bool = Field(default=False, alias="isSuperuser")
     is_verified: bool = Field(default=False, alias="isVerified")
     email_verified: bool = Field(default=False, alias="emailVerified")
+    kyc_id_verified: bool = Field(default=False, alias="kycIdVerified")
+    kyc_picture_verified: bool = Field(
+        default=False, alias="kycPictureVerified")
     phone_verified: bool = Field(default=False, alias="phoneVerified")
     password_hash: Union[None, str] = Field(
         default=None, min_length=32, alias="passwordHash")
