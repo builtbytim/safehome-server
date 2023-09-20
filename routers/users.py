@@ -174,7 +174,7 @@ async def kyc_picture(file: UploadFile = File(...),  auth_context:  Authenticati
         "folder": f"{settings.images_dir}/{user.uid}"
     })
 
-    user.kyc_picture = HttpUrl(upload_res["secure_url"]).unicode_string()
-    user.avatar_url = HttpUrl(upload_res["secure_url"]).unicode_string()
+    user.kyc_picture = upload_res["secure_url"]
+    user.avatar_url = upload_res["secure_url"]
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
