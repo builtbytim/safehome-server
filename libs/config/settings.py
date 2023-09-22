@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     kek3: str = "kek3"
 
     allowed_origins: list[str] = [
-        "http://localhost:3000", "https://safehome-gg.vercel.app"]
+        "http://localhost:3000", "https://safehome-gg.vercel.app", "https://app.safehome.timmypelumy.dev", "https://safehome.timmypelumy.dev"]
 
 
 @lru_cache()
