@@ -1,10 +1,10 @@
 from typing import Union
-from fastapi import HTTPException,  BackgroundTasks, Depends
+from fastapi import HTTPException,  BackgroundTasks, Depends, Header
 from pydantic import EmailStr
 from libs.db import _db, Collections
 from libs.utils.api_helpers import update_record
 from libs.config.settings import get_settings
-from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession
+from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode
 from libs.utils.security import _decode_jwt_token
 from datetime import datetime, timezone, timedelta
 from libs.utils.pure_functions import get_utc_timestamp
@@ -120,3 +120,28 @@ async def _get_user_by_email(email: EmailStr) -> UserDBModel:
 
 async def get_user_by_email(body: OAuth2PasswordRequestForm = Depends()) -> UserDBModel:
     return await _get_user_by_email(body.username)
+
+
+async def get_auth_code(auth_code:  str | None = Header(default=None, alias="X-AUTH-CODE")):
+
+    if auth_code is None:
+        raise HTTPException(status_code=400, detail="Missing auth code")
+
+    auth_code_from_db = await _db[Collections.authcodes].find_one({"code": auth_code})
+
+    if auth_code_from_db is None:
+        raise HTTPException(
+            status_code=404, detail=f"invalid auth code")
+
+    r = AuthCode(**auth_code_from_db)
+
+    future_ts = r.created_at + (settings.auth_code_validity_mins * 60)
+
+    if get_utc_timestamp() > future_ts:
+        raise HTTPException(status_code=400, detail="Expired auth code")
+
+    if not r.valid:
+        raise HTTPException(
+            status_code=404, detail=f"invalid auth code")
+
+    return r

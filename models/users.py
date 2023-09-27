@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, EmailStr, validator, constr
 from enum import Enum
 from typing import Union
 from libs.utils.pure_functions import *
+from libs.db import _db, Collections
 from time import time
 from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
@@ -26,6 +27,12 @@ class UserRoles(str, Enum):
     USER = "user"
     GUEST = "guest"
     NONE = "none"
+
+
+class KYCStatus(str, Enum):
+    APPROVED = "approved"
+    PENDING = "pending"
+    REJECTED = "rejected"
 
 
 class AuthProviders(str, Enum):
@@ -53,7 +60,10 @@ class ActionIdentifiers(str, Enum):
     RESET_PASSWORD_VIA_EMAIL = "RESET_PASSWORD_VIA_EMAIL"
     RESET_PASSWORD_VIA_SMS = "RESET_PASSWORD_VIA_SMS"
     VERIFY_EMAIL = "VERIFY_EMAIL"
-    VERIFY_PHONE = "VERIFY__PHONE"
+    VERIFY_PHONE = "VERIFY_PHONE"
+    VERIFY_KYC_DOCUMENT = "VERIFY_KYC_DOCUMENT"
+    VERIFY_KYC_PHOTO = "VERIFY_KYC_PHOTO"
+    AUTHENTICATION = "AUTHENTICATION"
 
 
 class DocumentTypes(str, Enum):
@@ -77,6 +87,11 @@ class RequestEmailOrSMSVerificationOutput(BaseModel):
     uid: str = Field(min_length=32)
     channel: PasswordResetChannels
     pk:  EmailStr | str
+
+
+class PasswordResetSaveInput(BaseModel):
+    uid: str = Field(min_length=32)
+    token: str = Field(min_length=16)
 
 
 class VerifyEmailOrSMSConfirmationInput(BaseModel):
@@ -104,6 +119,7 @@ class VerifyAccountConfirmationInput(BaseModel):
 
 class RequestPasswordResetInput(BaseModel):
     email: EmailStr
+    new_password: str = Field(min_length=8, max_length=25, alias="newPassword")
     channel: PasswordResetChannels
 
 
@@ -153,6 +169,20 @@ class IdentityDocument(IdentityDocumentBase):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
+class PasswordResetStore(BaseModel):
+    uid: str = Field(min_length=32, default_factory=get_uuid4)
+    user_id: str = Field(min_length=32, alias="userId")
+    new_password_hash: str = Field(min_length=32, alias="newPasswordHash")
+    channel: PasswordResetChannels
+    valid: bool = Field(default=True)
+    token: str = Field(min_length=6, max_length=32,
+                       default_factory=get_complex_id)
+    created_at: float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class UserBaseModel(BaseModel):
 
     """ User Model """
@@ -183,13 +213,14 @@ class UserInputModel(UserBaseModel):
 class UserDBModel(UserBaseModel):
     uid: str = Field(default_factory=get_uuid4)
     role: UserRoles = Field(default=UserRoles.USER)
-    kyc_id: IdentityDocument | None = Field(default=None, alias="kycId")
+    kyc_document: IdentityDocument | None = Field(
+        default=None, alias="kycDocument")
+    kyc_photo: Union[str, None] = Field(default=None, alias="kycPhoto")
     address: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
     country: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
     avatar_url: Union[str, None] = Field(default=None, alias="avatarUrl")
-    kyc_picture: Union[str, None] = Field(default=None, alias="kycPicture")
     gender: Union[Genders, None] = None
     auth_provider: AuthProviders = Field(
         default=AuthProviders.DEFAULT, alias="authProvider")
@@ -198,9 +229,7 @@ class UserDBModel(UserBaseModel):
     is_superuser: bool = Field(default=False, alias="isSuperuser")
     is_verified: bool = Field(default=False, alias="isVerified")
     email_verified: bool = Field(default=False, alias="emailVerified")
-    kyc_id_verified: bool = Field(default=False, alias="kycIdVerified")
-    kyc_picture_verified: bool = Field(
-        default=False, alias="kycPictureVerified")
+    kyc_status: KYCStatus | None = Field(default=None, alias="kycStatus")
     phone_verified: bool = Field(default=False, alias="phoneVerified")
     password_hash: Union[None, str] = Field(
         default=None, min_length=32, alias="passwordHash")
@@ -210,6 +239,8 @@ class UserDBModel(UserBaseModel):
     true_last_login: Union[float, None] = Field(
         alias="trueLastLogin", default=None)
     updated_at: float = Field(default_factory=time, alias="updatedAt")
+    password_updated_at: float = Field(
+        default_factory=time, alias="passwordUpdatedAt")
 
     @validator('phone')
     def validate_phone(v, values):
@@ -227,6 +258,28 @@ class UserDBModel(UserBaseModel):
 
 
 # Authentication Related Models
+
+
+class AuthCode(BaseModel):
+    uid: str = Field(default_factory=get_uuid4)
+    user_id: str = Field(alias="userId")
+    code: str = Field(default_factory=get_random_string)
+    action: ActionIdentifiers = Field(min_length=8, alias="action")
+    valid: bool = Field(default=True)
+    created_at: float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+    def verify(self,  user_id:  str, action: ActionIdentifiers) -> bool:
+        return self.user_id == user_id and self.action == action
+
+    def verify_action(self, action: ActionIdentifiers) -> bool:
+        return self.action == action
+
+    async def destroy(self):
+        self.valid = False
+        await _db[Collections.authcodes].update_one({"uid": self.uid}, {"$set": self.model_dump()})
 
 
 class AuthSession(BaseModel):

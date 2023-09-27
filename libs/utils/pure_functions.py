@@ -3,6 +3,10 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 
+def get_random_string(length: int = 32):
+    return os.urandom(length).hex()
+
+
 def get_utc_timestamp() -> float:
     return datetime.now(tz=timezone.utc).timestamp()
 

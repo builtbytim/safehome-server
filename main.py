@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.main import router
 from libs.huey_tasks.config import huey
 from libs.config.settings import get_settings
-from libs.huey_tasks.tasks import task_send_mail, task_test_huey
+from libs.huey_tasks.tasks import task_send_mail, task_test_huey, make_eligible_users_able_to_sign_in_after_kyc
 
 settings = get_settings()
 
@@ -33,7 +33,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
     max_age=3600,
-    expose_headers=["X-ACTION", "WWW-Authenticate"],
+    expose_headers=["X-ACTION", "X-AUTH-CODE", "WWW-Authenticate"],
 
 
 

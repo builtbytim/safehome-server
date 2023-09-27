@@ -3,7 +3,9 @@ from pydantic import EmailStr
 from libs.utils.pure_functions import get_utc_timestamp
 from libs.config.settings import get_settings
 from libs.logging import Logger
+from libs.db import Collections
 from huey.exceptions import CancelExecution
+from huey import crontab
 from .utils import exp_backoff_task
 from .config import huey
 from libs.emails.send_email import dispatch_email
@@ -41,3 +43,26 @@ def task_send_mail(email_type:  str, email_to:  EmailStr | list[EmailStr], email
     logger.info(f"Sending email of type {email_type} to {email_to}")
 
     dispatch_email(email_to, email_type, email_data)
+
+
+# Task to mark users who have gone throught kyc as eligible to sign in to the platform
+@huey.periodic_task(crontab(minute='*/1'), retries=5, retry_delay=30,)
+def make_eligible_users_able_to_sign_in_after_kyc():
+
+    logger.info(f"Making eligible users able to sign in after KYC")
+
+    # Get all users who have gone through KYC
+    cursor = db[Collections.users].find(
+        {"kyc_status": "pending"}).sort("created_at", -1).limit(100)
+
+    for user in cursor:
+
+        if user["kyc_document"] is not None and user["kyc_photo"] is not None:
+
+            # Update the user's kyc status
+            db[Collections.users].update_one(
+                {"uid": user["uid"]}, {"$set": {"kyc_status": "approved"}})
+
+            # Send an email to the user
+            task_send_mail("kyc_approved", user["email"], {
+                           "first_name": user["first_name"]})

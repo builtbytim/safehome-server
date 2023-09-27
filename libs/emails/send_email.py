@@ -15,6 +15,9 @@ logger = Logger(f"{__package__}.{__name__}")
 
 def dispatch_email(email_to: list[EmailStr] | EmailStr, email_type: str, email_data: dict):
 
+    if not email_type in EMAIL_DEFS:
+        raise ValueError("Invalid email type")
+
     conf = EMAIL_DEFS[email_type]
 
     try:

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Response
 from libs.config.settings import get_settings
 from models.users import *
 from libs.db import _db, Collections
@@ -8,9 +8,10 @@ from libs.utils.api_helpers import update_record, find_record, _validate_email_f
 from libs.huey_tasks.tasks import task_send_mail
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
 from pydantic import HttpUrl
-from libs.deps.users import get_user_by_email, get_auth_context
+from libs.deps.users import get_auth_context, get_auth_code
 from fastapi.security import OAuth2PasswordRequestForm
 from libs.cloudinary.uploader import upload_image
+from datetime import timedelta
 
 
 settings = get_settings()
@@ -24,8 +25,8 @@ router = APIRouter(responses={
 }, tags=["Users"])
 
 
-@router.post("", response_model=UserDBModel, response_model_by_alias=True, response_model_exclude=USER_EXLUCUDE_FIELDS)
-async def user_sign_up(body:  UserInputModel):
+@router.post("",  response_model=UserDBModel, response_model_by_alias=True, response_model_exclude=USER_EXLUCUDE_FIELDS)
+async def user_sign_up(response:  Response, body:  UserInputModel):
 
     if not await _validate_email_from_db(body.email):
         raise HTTPException(400, "user with email exists already")
@@ -49,13 +50,30 @@ async def user_sign_up(body:  UserInputModel):
     # save into data base
     await _db[Collections.users].insert_one(user_db.model_dump())
 
+    # create verify email auth code
+
+    verify_email_auth_code = AuthCode(
+        user_id=user_db.uid, action=ActionIdentifiers.VERIFY_EMAIL, )
+
+    await _db[Collections.authcodes].insert_one(verify_email_auth_code.model_dump())
+
+    response.headers["X-AUTH-CODE"] = verify_email_auth_code.code
+
     return user_db
 
 
 @router.post("/emails/verify", status_code=200, response_model=RequestEmailOrSMSVerificationOutput)
-async def email_verify(body: RequestEmailOrSMSVerificationInput):
+async def email_verify(body: RequestEmailOrSMSVerificationInput, auth_code:  AuthCode = Depends(get_auth_code)):
+
+    v = auth_code.verify_action(ActionIdentifiers.VERIFY_EMAIL)
+
+    if not v:
+        raise HTTPException(400, "Invalid Auth Code")
 
     user: UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.email, raise_404=True)
+
+    if user.uid != auth_code.user_id:
+        raise HTTPException(400, "Invalid Auth Code")
 
     if user.email_verified:
         raise HTTPException(400, "email already verified")
@@ -64,15 +82,18 @@ async def email_verify(body: RequestEmailOrSMSVerificationInput):
 
     # send email
 
-    url = f"{settings.app_url}/verify-email/{user.email}?uid={uid}&token={encode_to_base64(otp)}"
+    url = f"{settings.app_url}/verify-email/{user.email}?uid={uid}&token={encode_to_base64(otp)}&authCode={auth_code.code}"
 
     task_send_mail(
         "verify_email", user.email, {"otp": otp, "url": url})
 
+    if settings.debug:
+        print("URL:", url, "OTP:", otp)
+
     return RequestEmailOrSMSVerificationOutput(uid=uid, channel=Channels.EMAIL, pk=user.email)
 
 
-@router.post("/emails/confirm", status_code=200)
+@router.post("/emails/confirm", status_code=200, response_model=AuthCode)
 async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
 
     user: UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.foreign_key, raise_404=True)
@@ -92,22 +113,46 @@ async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
+    kyc_doc_auth_code = AuthCode(
+        user_id=user.uid, action=ActionIdentifiers.VERIFY_KYC_DOCUMENT, )
+
+    await _db[Collections.authcodes].insert_one(kyc_doc_auth_code.model_dump())
+
+    return kyc_doc_auth_code
+
 
 @router.post("/sign-in", response_model=AccessToken)
 async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
 
     user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.username.lower(), raise_404=False)
 
+    auth_code = AuthCode(
+        user_id=user.uid, action=ActionIdentifiers.AUTHENTICATION, )
+
+    await _db[Collections.authcodes].insert_one(auth_code.model_dump())
+
     if user is None:
         raise HTTPException(401, "Account does not exist.")
 
     if not user.email_verified:
         raise HTTPException(
-            400, "Account not verified, please verify your email.", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL"})
+            400, "Account not verified, please verify your email.", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": auth_code.code})
 
     if not user.is_active:
         raise HTTPException(
-            400, "Account is not active, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL"})
+            400, "Account is not active, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": auth_code.code})
+
+    if not user.kyc_document:
+        raise HTTPException(
+            400, "Account KYC identity document not verified, please verify your identity.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_DOC", "X-AUTH-CODE": auth_code.code})
+
+    if not user.kyc_photo:
+        raise HTTPException(
+            400, "Account KYC photo not verified, please verify your identity.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_PHOTO", "X-AUTH-CODE": auth_code.code})
+
+    if not user.kyc_status == KYCStatus.APPROVED:
+        raise HTTPException(
+            400, "Account KYC not approved, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_PHOTO", "X-AUTH-CODE": auth_code.code})
 
     is_correct_password = scrypt_verify(
         body.password, user.password_hash, user.uid)
@@ -144,12 +189,109 @@ async def sign_out(auth_context:  AuthenticationContext = Depends(get_auth_conte
     # await update_record(UserDBModel, auth_context.user.model_dump(), Collections.users, "uid")
 
 
-@router.post("/kyc/id", status_code=200, response_model=IdentityDocument, response_model_by_alias=True)
-async def kyc_id(document_type:  DocumentTypes = Form(alias='documentType'), document_number:  str | None = Form(default=None, alias="documentNumber"), file: UploadFile = File(...),  auth_context:  AuthenticationContext = Depends(get_auth_context), ):
-    user = auth_context.user
+@router.post("/password/reset", status_code=200)
+async def password_reset(body:  RequestPasswordResetInput):
 
-    if user.kyc_id is not None and user.kyc_id_verified:
-        raise HTTPException(400, "KYC identity document already verified")
+    user: UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.email, raise_404=False)
+
+    if user is None:
+        return
+
+    if not user.email_verified:
+        raise HTTPException(
+            400, "Account is not verified, please verify your email.")
+
+    if not user.is_active:
+        raise HTTPException(
+            400, "Account is not active, please contact support.")
+
+    if not user.kyc_status == KYCStatus.APPROVED:
+        raise HTTPException(
+            400, "Account KYC not approved, please contact support.")
+
+    if get_utc_timestamp() - user.password_updated_at < (60 * 2):
+        raise HTTPException(
+            400, "Password was recovered recently, please try again later")
+
+    err, hash = scrypt_hash(body.new_password, user.uid)
+
+    if err:
+        raise HTTPException(500, str(err))
+
+    reset_store = PasswordResetStore(
+        user_id=user.uid, new_password_hash=hash, channel=Channels.EMAIL,
+    )
+    token = reset_store.token
+
+    # send email
+
+    url = f"{settings.app_url}/password/save?uid={user.uid}&token={token}"
+
+    task_send_mail(
+        "reset_password", user.email, {"url": url, "first_name": user.first_name})
+
+    if settings.debug:
+        print("URL:", url, )
+
+
+@router.post("/password/confirm-reset", status_code=200)
+async def password_save(body:  PasswordResetSaveInput):
+
+    user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", body.uid, raise_404=False)
+
+    if user is None:
+        raise HTTPException(400, "Reset token does not exist in the system")
+
+    if not user.email_verified:
+        raise HTTPException(
+            400, "Account is not verified, please verify your email.")
+
+    if not user.is_active:
+        raise HTTPException(
+            400, "Account is not active, please contact support.")
+
+    if not user.kyc_status == KYCStatus.APPROVED:
+        raise HTTPException(
+            400, "Account KYC not approved, please contact support.")
+
+    reset_store: PasswordResetStore = await find_record(PasswordResetStore, Collections.password_reset_store, "token", body.token, raise_404=True)
+
+    if get_utc_timestamp() - user.password_updated_at < (60 * 5):
+        raise HTTPException(
+            400, "Password was recovered recently, please try again later")
+
+    if reset_store.user_id != user.uid:
+        raise HTTPException(400, "The reset token is not for this user")
+
+    if not reset_store.valid:
+        raise HTTPException(400, "The reset token is not valid")
+
+    if get_utc_timestamp() > reset_store.created_at + (60 * 10):
+        raise HTTPException(400, "The reset token has expired")
+
+    user.password_hash = reset_store.new_password_hash
+    user.password_updated_at = get_utc_timestamp()
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+    await _db[Collections.passwordresetstores].delete_one({"user_id": user.uid, "token": body.token})
+
+    task_send_mail(
+        "reset_password_done", user.email, {"first_name": user.first_name, "support_email": "support@safehome.com"})
+
+
+@router.post("/kyc/document", status_code=200, response_model=AuthCode, response_model_by_alias=True)
+async def kyc_document(document_type:  DocumentTypes = Form(alias='documentType'), document_number:  str | None = Form(default=None, alias="documentNumber"), file: UploadFile = File(...), auth_code: AuthCode = Depends(get_auth_code)):
+
+    v = auth_code.verify_action(ActionIdentifiers.VERIFY_KYC_DOCUMENT)
+
+    if not v:
+        raise HTTPException(400, "Invalid Auth Code")
+
+    user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", auth_code.user_id, raise_404=True)
+
+    if user.kyc_document is not None:
+        raise HTTPException(400, "KYC identity document uploaded already")
 
     upload_res = upload_image(file.file, {
         "folder": f"{settings.images_dir}/{user.uid}"
@@ -158,25 +300,41 @@ async def kyc_id(document_type:  DocumentTypes = Form(alias='documentType'), doc
     doc = IdentityDocument(
         document_type=document_type, document_number=document_number, document_url=upload_res["secure_url"], user_id=user.uid)
 
-    user.kyc_id = doc
+    user.kyc_document = doc
+
+    user.kyc_status = KYCStatus.PENDING
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
-    return doc
+    kyc_photo_auth_code = AuthCode(
+        user_id=user.uid, action=ActionIdentifiers.VERIFY_KYC_PHOTO, )
+
+    await _db[Collections.authcodes].insert_one(kyc_photo_auth_code.model_dump())
+
+    return kyc_photo_auth_code
 
 
-@router.post("/kyc/picture", status_code=200, )
-async def kyc_picture(file: UploadFile = File(...),  auth_context:  AuthenticationContext = Depends(get_auth_context), ):
-    user = auth_context.user
+@router.post("/kyc/photo", status_code=200, )
+async def kyc_photo(file: UploadFile = File(...),   auth_code: AuthCode = Depends(get_auth_code)):
 
-    if user.kyc_picture is not None and user.kyc_picture_verified:
-        raise HTTPException(400, "KYC picture already verified")
+    v = auth_code.verify_action(ActionIdentifiers.VERIFY_KYC_PHOTO)
+
+    if not v:
+        raise HTTPException(400, "Invalid Auth Code")
+
+    user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", auth_code.user_id, raise_404=True)
+
+    if user.kyc_photo is not None:
+        raise HTTPException(400, "KYC photo uploaded already")
 
     upload_res = upload_image(file.file, {
         "folder": f"{settings.images_dir}/{user.uid}"
     })
 
-    user.kyc_picture = upload_res["secure_url"]
+    user.kyc_photo = upload_res["secure_url"]
+
     user.avatar_url = upload_res["secure_url"]
+
+    user.kyc_status = KYCStatus.PENDING
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")

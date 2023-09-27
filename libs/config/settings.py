@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     bearer_header_name:  str = "Bearer"
     password_salt: str = "passwordsalt"
     jwt_access_token_expiration_hours: int = 24
+    auth_code_validity_mins: int = 10
     jwt_secret_key: str = "jwtsecretkey"
     kek: str = "kek"
     kek1: str = "kek1"

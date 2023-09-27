@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Verify your email</title>
+    <title>KYC Approved</title>
   </head>
 
   <body style="background-color: rgba(141, 64, 0, 0.08); font-size: 16px">
@@ -20,53 +20,28 @@
             font-weight: bold;
           "
         >
-          Verify your email
+          KYC Approved
         </h1>
       </div>
 
       <div style="padding: 10px 20px 40px 20px">
-        <p>
-          Thank you for signing up to SafeHome. Please click the button below to
-          verify your email address.
+        <p style="font-size: 20px; padding: 10px 10px 10px 10px">
+          Dear {{ first_name }},
         </p>
 
-        <a href="{{ url }}" style="text-decoration: none">
-          <div
-            style="
-              background-color: rgba(141, 64, 0);
-              color: white;
-              padding: 10px 20px 10px 20px;
-              border-radius: 5px;
-              text-align: center;
-              font-size: 20px;
-              font-weight: bold;
-              margin: 10px 10px 10px 0;
-              display: inline-block;
-            "
-          >
-            Verify Email
-          </div>
-        </a>
-
-        <p>
-          If you are having trouble clicking the button, copy and paste the URL
-          below into your web browser.
+        <p style="font-size: 20px; padding: 10px 10px 10px 10px">
+          Your KYC has been approved. You can now start using SafeHome.
         </p>
 
-        <p>{{ url }}</p>
+        <p style="font-size: 20px; padding: 10px 10px 10px 10px">
+          Thank you for using SafeHome.
+        </p>
 
-        or enter the following code:
+        <p style="font-size: 20px; padding: 10px 10px 10px 10px">Regards,</p>
 
-        <p>{{ otp }}</p>
-
-        <p>If you did not create an account, no further action is required.</p>
-
-        <p>Thank you for using SafeHome!</p>
-
-        <br />
-
-        <p>Regards,</p>
-        <p>The SafeHome Team.</p>
+        <p style="font-size: 20px; padding: 10px 10px 10px 10px">
+          SafeHome Team
+        </p>
       </div>
 
       <div style="padding: 10px 10px 10px 10px">

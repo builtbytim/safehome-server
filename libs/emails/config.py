@@ -9,5 +9,28 @@ EMAIL_DEFS = {
         'template_name': "verify_email.html",
     },
 
+    "kyc_approved": {
+        "subject": "KYC Approved",
+        "mail_from": settings.mail_from,
+        "template_name": "kyc_approved.html",
+
+    },
+
+    "reset_password": {
+        "subject": "Reset Password",
+        "mail_from": settings.mail_from,
+        "template_name": "reset_password.html",
+
+    },
+
+    "reset_password_done": {
+        "subject": "Your Password Has Been Reset",
+        "mail_from": settings.mail_from,
+        "template_name": "reset_password_done.html",
+
+    }
+
+
+
 
 }
