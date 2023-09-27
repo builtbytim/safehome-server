@@ -126,13 +126,13 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
 
     user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.username.lower(), raise_404=False)
 
+    if user is None:
+        raise HTTPException(401, "Account does not exist.")
+
     auth_code = AuthCode(
         user_id=user.uid, action=ActionIdentifiers.AUTHENTICATION, )
 
     await _db[Collections.authcodes].insert_one(auth_code.model_dump())
-
-    if user is None:
-        raise HTTPException(401, "Account does not exist.")
 
     if not user.email_verified:
         raise HTTPException(
@@ -221,6 +221,10 @@ async def password_reset(body:  RequestPasswordResetInput):
     reset_store = PasswordResetStore(
         user_id=user.uid, new_password_hash=hash, channel=Channels.EMAIL,
     )
+
+    # save store to db
+    await _db[Collections.passwordresetstores].insert_one(reset_store.model_dump())
+
     token = reset_store.token
 
     # send email
@@ -254,7 +258,7 @@ async def password_save(body:  PasswordResetSaveInput):
         raise HTTPException(
             400, "Account KYC not approved, please contact support.")
 
-    reset_store: PasswordResetStore = await find_record(PasswordResetStore, Collections.password_reset_store, "token", body.token, raise_404=True)
+    reset_store: PasswordResetStore = await find_record(PasswordResetStore, Collections.passwordresetstores, "token", body.token, raise_404=True)
 
     if get_utc_timestamp() - user.password_updated_at < (60 * 5):
         raise HTTPException(
