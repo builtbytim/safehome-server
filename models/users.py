@@ -175,8 +175,7 @@ class PasswordResetStore(BaseModel):
     new_password_hash: str = Field(min_length=32, alias="newPasswordHash")
     channel: PasswordResetChannels
     valid: bool = Field(default=True)
-    token: str = Field(min_length=6, max_length=32,
-                       default_factory=get_random_string)
+    token: str = Field(min_length=16, default_factory=get_random_string)
     created_at: float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
 
