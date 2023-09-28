@@ -17,14 +17,14 @@ EMAIL_DEFS = {
     },
 
     "reset_password": {
-        "subject": "Reset Password",
+        "subject": "Reset Your Password",
         "mail_from": settings.mail_from,
         "template_name": "reset_password.html",
 
     },
 
     "reset_password_done": {
-        "subject": "Your Password Has Been Reset",
+        "subject": "Your Password Was Reset",
         "mail_from": settings.mail_from,
         "template_name": "reset_password_done.html",
 

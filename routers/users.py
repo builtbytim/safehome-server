@@ -150,9 +150,13 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(
             400, "Account KYC photo not verified, please verify your identity.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_PHOTO", "X-AUTH-CODE": auth_code.code})
 
-    if not user.kyc_status == KYCStatus.APPROVED:
+    if not user.kyc_status == KYCStatus.APPROVED and not (user.kyc_status == KYCStatus.PENDING):
         raise HTTPException(
             400, "Account KYC not approved, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_PHOTO", "X-AUTH-CODE": auth_code.code})
+
+    if user.kyc_status == KYCStatus.PENDING:
+        raise HTTPException(
+            400, "Account KYC is pending, please contact support.",  headers={"WWW-Authenticate": "Bearer",  "X-AUTH-CODE": auth_code.code})
 
     is_correct_password = scrypt_verify(
         body.password, user.password_hash, user.uid)
@@ -258,7 +262,10 @@ async def password_save(body:  PasswordResetSaveInput):
         raise HTTPException(
             400, "Account KYC not approved, please contact support.")
 
-    reset_store: PasswordResetStore = await find_record(PasswordResetStore, Collections.passwordresetstores, "token", body.token, raise_404=True)
+    reset_store: PasswordResetStore | None = await find_record(PasswordResetStore, Collections.passwordresetstores, "token", body.token, raise_404=False)
+
+    if reset_store is None:
+        raise HTTPException(400, "Reset token does not exist in the system")
 
     if get_utc_timestamp() - user.password_updated_at < (60 * 5):
         raise HTTPException(
