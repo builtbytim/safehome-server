@@ -14,6 +14,7 @@ class Collections(str, Enum):
     throttles = "throttles"
     authcodes = "authcodes"
     passwordresetstores = "passwordresetstores"
+    waitlist_applications = "waitlistapplications"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)
