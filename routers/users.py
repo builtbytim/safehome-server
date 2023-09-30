@@ -7,11 +7,9 @@ from libs.utils.security import scrypt_hash
 from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
 from libs.huey_tasks.tasks import task_send_mail
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
-from pydantic import HttpUrl
 from libs.deps.users import get_auth_context, get_auth_code
 from fastapi.security import OAuth2PasswordRequestForm
 from libs.cloudinary.uploader import upload_image
-from datetime import timedelta
 
 
 settings = get_settings()

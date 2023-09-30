@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Response
+from fastapi import APIRouter, HTTPException
 from libs.config.settings import get_settings
 from models.misc import *
 from libs.db import _db, Collections
 from libs.utils.api_helpers import find_record
 from libs.utils.pure_functions import *
+from libs.huey_tasks.tasks import task_send_mail
 
 
 settings = get_settings()
@@ -30,5 +31,10 @@ async def add_waitlist_applicant(body:  WaitlistApplicationInput):
     application = WaitlistApplication(**body.model_dump())
 
     await _db[Collections.waitlist_applications].insert_one(application.model_dump())
+
+    # Send email to applicant
+
+    task_send_mail("joined_waitlist", application.email,
+                   {"full_name":  application.full_name})
 
     return {"message": "Application submitted successfully!"}

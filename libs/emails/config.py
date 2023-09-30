@@ -42,7 +42,15 @@ EMAIL_DEFS = {
         "mail_from": settings.mail_from,
         "template_name": "sign_in_notification.html",
 
+    },
+
+    "joined_waitlist": {
+        "subject": "Application Received",
+        "mail_from": settings.mail_from,
+        "template_name": "joined_waitlist.html",
+
     }
+
 
 
 
