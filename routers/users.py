@@ -118,6 +118,13 @@ async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
 
     await _db[Collections.authcodes].insert_one(kyc_doc_auth_code.model_dump())
 
+    # send email
+
+    url = f"{settings.app_url}/verify-kyc/document?uid={user.uid}&authCode={kyc_doc_auth_code.code}"
+
+    task_send_mail(
+        "verify_email_done", user.email, {"url": url})
+
     return kyc_doc_auth_code
 
 
@@ -172,6 +179,11 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
     token = await _create_access_token(user.uid)
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+    # send email
+
+    task_send_mail(
+        "sign_in_notification", user.email, {"support_email": settings.support_email})
 
     return {
         "access_token": token,
@@ -288,7 +300,7 @@ async def password_save(body:  PasswordResetSaveInput):
     await _db[Collections.passwordresetstores].delete_one({"user_id": user.uid, "token": body.token})
 
     task_send_mail(
-        "reset_password_done", user.email, {"first_name": user.first_name, "support_email": "support@safehome.com"})
+        "reset_password_done", user.email, {"first_name": user.first_name, "support_email":  settings.support_email})
 
 
 @router.post("/kyc/document", status_code=200, response_model=AuthCode, response_model_by_alias=True)

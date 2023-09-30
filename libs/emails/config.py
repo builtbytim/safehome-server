@@ -9,6 +9,12 @@ EMAIL_DEFS = {
         'template_name': "verify_email.html",
     },
 
+    'verify_email_done': {
+        'subject': "Email Confirmed",
+        'mail_from': settings.mail_from,
+        'template_name': "verify_email_done.html",
+    },
+
     "kyc_approved": {
         "subject": "KYC Approved",
         "mail_from": settings.mail_from,
@@ -28,7 +34,16 @@ EMAIL_DEFS = {
         "mail_from": settings.mail_from,
         "template_name": "reset_password_done.html",
 
+    },
+
+
+    "sign_in_notification": {
+        "subject": "Sign In Notification",
+        "mail_from": settings.mail_from,
+        "template_name": "sign_in_notification.html",
+
     }
+
 
 
 

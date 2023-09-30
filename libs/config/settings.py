@@ -1,4 +1,4 @@
-from pydantic import HttpUrl
+from pydantic import EmailStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     mail_domain_username:  str = "admin"
     otp_interval: int = 300  # seconds
     otp_length: int = 6
+    support_email:  EmailStr = "support@safehome.com"
     bearer_header_name:  str = "Bearer"
     password_salt: str = "passwordsalt"
     jwt_access_token_expiration_hours: int = 24

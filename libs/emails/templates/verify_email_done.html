@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Verify your email</title>
+    <title>Email Confirmed</title>
   </head>
 
   <body style="background-color: rgba(141, 64, 0, 0.08); font-size: 16px">
@@ -20,14 +20,14 @@
             font-weight: bold;
           "
         >
-          Verify your email
+          Email Confirmed
         </h1>
       </div>
 
       <div style="padding: 10px 20px 40px 20px">
         <p>
-          Thank you for signing up to SafeHome. Please click the button below to
-          verify your email address.
+          Thank you for signing up to SafeHome. Your email has been confirmed.
+          You can now proceed to verify your identity.
         </p>
 
         <a href="{{ url }}" style="text-decoration: none">
@@ -44,7 +44,7 @@
               display: inline-block;
             "
           >
-            Verify Email
+            Verify Identity
           </div>
         </a>
 
@@ -56,19 +56,6 @@
         <p style="font-size: 16px; font-weight: bold; color: rgba(141, 64, 0)">
           {{ url }}
         </p>
-
-        or enter the following code:
-
-        <p>{{ otp }}</p>
-
-        <p>If you did not create an account, no further action is required.</p>
-
-        <p>Thank you for using SafeHome!</p>
-
-        <br />
-
-        <p>Regards,</p>
-        <p>The SafeHome Team.</p>
       </div>
 
       <div style="padding: 10px 10px 10px 10px">
