@@ -209,8 +209,9 @@ class UserBaseModel(BaseModel):
     def enforce_age_constraints(cls, value):
         # age must be more than 18 years
         if value is not None:
-            if not is_adult(value):
-                raise ValueError("You must be 18 years or older")
+            if not is_age_in_range(value, 18, 100):
+                raise ValueError(
+                    "You must be 18 years or older to use this service")
         return value
 
     @validator('email', pre=True, always=True)
