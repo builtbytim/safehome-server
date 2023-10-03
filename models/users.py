@@ -56,6 +56,11 @@ class PasswordResetChannels(str, Enum):
     SMS = "SMS"
 
 
+class Genders(str, Enum):
+    MALE = "MALE"
+    FEMALE = "FEMALE"
+
+
 class ActionIdentifiers(str, Enum):
     RESET_PASSWORD_VIA_EMAIL = "RESET_PASSWORD_VIA_EMAIL"
     RESET_PASSWORD_VIA_SMS = "RESET_PASSWORD_VIA_SMS"
@@ -192,7 +197,21 @@ class UserBaseModel(BaseModel):
 
     email: EmailStr
 
+    gender:  Genders | None = None
+
+    date_of_birth: float | None = Field(alias="dateOfBirth", default=None)
+
     phone: str = Field(min_length=10, max_length=15)
+
+    # validate date of birth
+
+    @validator("date_of_birth", pre=False, always=True)
+    def enforce_age_constraints(cls, value):
+        # age must be more than 18 years
+        if value is not None:
+            if not is_adult(value):
+                raise ValueError("You must be 18 years or older")
+        return value
 
     @validator('email', pre=True, always=True)
     def normalize_email(cls, value):
