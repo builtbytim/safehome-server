@@ -203,6 +203,50 @@ async def sign_out(auth_context:  AuthenticationContext = Depends(get_auth_conte
     # await update_record(UserDBModel, auth_context.user.model_dump(), Collections.users, "uid")
 
 
+@router.post("/password/change", status_code=200)
+async def change_password(body:  PasswordChangeInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+
+    user:  UserDBModel = auth_context.user
+
+    if get_utc_timestamp() - user.password_changed_at < (60 * 5):
+        raise HTTPException(
+            400, "Password was changed recently, please try again later")
+
+    err1, input_current_password_hash = scrypt_hash(
+        body.current_password, user.uid)
+
+    if err1:
+        raise HTTPException(500, str(err1))
+
+    if user.password_hash != input_current_password_hash:
+        raise HTTPException(
+            400, "The current password you entered is incorrect")
+
+    err2, input_new_password_hash = scrypt_hash(body.new_password, user.uid)
+
+    if err2:
+        raise HTTPException(500, str(err2))
+
+    if input_new_password_hash == user.password_hash:
+        raise HTTPException(
+            400, "New password cannot be the same as old password")
+
+    user.password_hash = input_new_password_hash
+
+    user.password_changed_at = get_utc_timestamp()
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+    # invalidate all user sessions
+
+    await _db[Collections.authsessions].update_many({"user_id": user.uid}, {"$set": {"is_valid": False}})
+
+    # send email
+
+    task_send_mail(
+        "password_changed", user.email, {"first_name": user.first_name, "support_email":  settings.support_email, "reset_link": f"{settings.app_url}/password/reset"})
+
+
 @router.post("/password/reset", status_code=200)
 async def password_reset(body:  RequestPasswordResetInput):
 
@@ -223,7 +267,7 @@ async def password_reset(body:  RequestPasswordResetInput):
         raise HTTPException(
             400, "Account KYC not approved, please contact support.")
 
-    if get_utc_timestamp() - user.password_updated_at < (60 * 2):
+    if get_utc_timestamp() - user.password_reset_at < (60 * 2):
         raise HTTPException(
             400, "Password was recovered recently, please try again later")
 
@@ -277,7 +321,7 @@ async def password_save(body:  PasswordResetSaveInput):
     if reset_store is None:
         raise HTTPException(400, "Reset token does not exist in the system")
 
-    if get_utc_timestamp() - user.password_updated_at < (60 * 5):
+    if get_utc_timestamp() - user.password_reset_at < (60 * 5):
         raise HTTPException(
             400, "Password was recovered recently, please try again later")
 
@@ -291,7 +335,7 @@ async def password_save(body:  PasswordResetSaveInput):
         raise HTTPException(400, "The reset token has expired")
 
     user.password_hash = reset_store.new_password_hash
-    user.password_updated_at = get_utc_timestamp()
+    user.password_reset_at = get_utc_timestamp()
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 

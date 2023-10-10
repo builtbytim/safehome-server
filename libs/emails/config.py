@@ -37,6 +37,14 @@ EMAIL_DEFS = {
     },
 
 
+    "password_changed": {
+        "subject": "Your Password Was Changed",
+        "mail_from": settings.mail_from,
+        "template_name": "password_changed.html",
+
+    },
+
+
     "sign_in_notification": {
         "subject": "Sign In Notification",
         "mail_from": settings.mail_from,

@@ -94,6 +94,13 @@ class RequestEmailOrSMSVerificationOutput(BaseModel):
     pk:  EmailStr | str
 
 
+class PasswordChangeInput(BaseModel):
+    current_password:  str = Field(min_length=8, alias="currentPassword")
+    new_password:  str = Field(min_length=8, alias="newPassword")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class PasswordResetSaveInput(BaseModel):
     uid: str = Field(min_length=32)
     token: str = Field(min_length=16)
@@ -258,8 +265,10 @@ class UserDBModel(UserBaseModel):
     true_last_login: Union[float, None] = Field(
         alias="trueLastLogin", default=None)
     updated_at: float = Field(default_factory=time, alias="updatedAt")
-    password_updated_at: float = Field(
-        default_factory=time, alias="passwordUpdatedAt")
+    password_changed_at: float = Field(
+        default_factory=get_utc_timestamp, alias="passwordChangedAt")
+    password_reset_at: float = Field(
+        default_factory=get_utc_timestamp, alias="passwordResetAt")
 
     @validator('phone')
     def validate_phone(v, values):
