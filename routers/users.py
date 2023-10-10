@@ -60,6 +60,23 @@ async def user_sign_up(response:  Response, body:  UserInputModel):
     return user_db
 
 
+@router.put("",  response_model=UserDBModel, response_model_by_alias=True, response_model_exclude=USER_EXLUCUDE_FIELDS)
+async def update_user(body:  UserUpdateModel, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+
+    user = auth_context.user
+
+    update_data = body.model_dump(exclude_unset=True)
+
+    # update the user object
+
+    for k, v in update_data.items():
+        setattr(user, k, v)
+
+    updated_user = await update_record(UserDBModel, user.model_dump(), Collections.users, "uid", refresh_from_db=True)
+
+    return updated_user
+
+
 @router.post("/emails/verify", status_code=200, response_model=RequestEmailOrSMSVerificationOutput)
 async def email_verify(body: RequestEmailOrSMSVerificationInput, auth_code:  AuthCode = Depends(get_auth_code)):
 

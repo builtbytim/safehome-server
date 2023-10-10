@@ -230,6 +230,15 @@ class UserBaseModel(BaseModel):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
+class UserUpdateModel(UserBaseModel):
+    address: Union[str, None] = Field(
+        default=None,  min_length=2, max_length=35)
+    country: Union[str, None] = Field(
+        default=None,  min_length=2, max_length=35)
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class UserInputModel(UserBaseModel):
     password: str = Field(min_length=8, max_length=25)
 
