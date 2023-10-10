@@ -44,7 +44,7 @@ def handle_response(ok, status, data, silent=False):
 
 def make_url(frag, surfix="", skip_base=True):
 
-    base_url = settings.coinprofile_test_api_url if settings.debug else settings.coinprofile_api_production_url
+    base_url = ""
 
     if skip_base:
         return "{0}{1}".format(frag, surfix)
