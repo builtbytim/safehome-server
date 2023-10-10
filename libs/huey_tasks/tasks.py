@@ -62,6 +62,16 @@ def task_initiate_kyc_verification(user_id:  str):
 
     user_db = UserDBModel(**user)
 
+    # Update the user's kyc status
+    db[Collections.users].update_one(
+        {"uid": user_id}, {"$set": {"kyc_status": "approved"}})
+
+    # Send an email to the user
+    task_send_mail("kyc_approved", user["email"], {
+        "first_name": user["first_name"]})
+
+    return
+
     if user["kyc_status"] == "approved":
         logger.info(f"User {user_id} has already been verified")
         raise CancelExecution(retry=False)
