@@ -50,7 +50,7 @@ def task_send_mail(email_type:  str, email_to:  EmailStr | list[EmailStr], email
 
 # Task to initiate kyc verification
 
-@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=15)
 def task_initiate_kyc_verification(user_id:  str):
 
     logger.info(f"Initiating KYC verification for user {user_id}")
