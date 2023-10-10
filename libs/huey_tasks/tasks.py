@@ -84,7 +84,8 @@ def task_initiate_kyc_verification(user_id:  str):
             "dob": user_db.date_of_birth,
         }
 
-        url = make_url(Endpoints.bvn_verification, surfix=f"/{decrypted_bvn}")
+        url = make_url(Endpoints.bvn_verification.value,
+                       surfix=f"/{decrypted_bvn}")
 
         # Make the request to the KYC API
         ok, status, data = make_req(
@@ -142,7 +143,8 @@ def task_initiate_kyc_verification(user_id:  str):
             "dob": user_db.date_of_birth,
         }
 
-        url = make_url(Endpoints.nin_verification, surfix=f"/{decrypted_nin}")
+        url = make_url(Endpoints.nin_verification.value,
+                       surfix=f"/{decrypted_nin}")
 
         # Make the request to the KYC API
         ok, status, data = make_req(
