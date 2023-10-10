@@ -10,6 +10,7 @@ from libs.utils.security import generate_totp, validate_totp, encode_to_base64, 
 from libs.deps.users import get_auth_context, get_auth_code
 from fastapi.security import OAuth2PasswordRequestForm
 from libs.cloudinary.uploader import upload_image
+from libs.utils.security import encrypt, decrypt
 
 
 settings = get_settings()
@@ -129,13 +130,13 @@ async def email_confirm(body: VerifyEmailOrSMSConfirmationInput):
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
     kyc_doc_auth_code = AuthCode(
-        user_id=user.uid, action=ActionIdentifiers.VERIFY_KYC_DOCUMENT, )
+        user_id=user.uid, action=ActionIdentifiers.ADD_KYC_INFO, )
 
     await _db[Collections.authcodes].insert_one(kyc_doc_auth_code.model_dump())
 
     # send email
 
-    url = f"{settings.app_url}/verify-kyc/document?uid={user.uid}&authCode={kyc_doc_auth_code.code}"
+    url = f"{settings.app_url}/kyc?uid={user.uid}&authCode={kyc_doc_auth_code.code}"
 
     task_send_mail(
         "verify_email_done", user.email, {"url": url})
@@ -164,13 +165,9 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(
             400, "Account is not active, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": auth_code.code})
 
-    if not user.kyc_document:
+    if user.kyc_status is None:
         raise HTTPException(
-            400, "Account KYC identity document not verified, please verify your identity.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_DOC", "X-AUTH-CODE": auth_code.code})
-
-    if not user.kyc_photo:
-        raise HTTPException(
-            400, "Account KYC photo not verified, please verify your identity.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_PHOTO", "X-AUTH-CODE": auth_code.code})
+            400, "Please verify your identity first",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC", "X-AUTH-CODE": auth_code.code})
 
     if not user.kyc_status == KYCStatus.APPROVED and not (user.kyc_status == KYCStatus.PENDING):
         raise HTTPException(
@@ -362,6 +359,45 @@ async def password_save(body:  PasswordResetSaveInput):
         "reset_password_done", user.email, {"first_name": user.first_name, "support_email":  settings.support_email})
 
 
+@router.post("/kyc", status_code=200)
+async def add_kyc_info(body:  KYCVerificationInput,  auth_code: AuthCode = Depends(get_auth_code)):
+
+    v1 = auth_code.verify_action(ActionIdentifiers.ADD_KYC_INFO)
+    v2 = auth_code.verify_action(ActionIdentifiers.AUTHENTICATION)
+
+    if not (v1 or v2):
+        raise HTTPException(400, "Invalid Auth Code ")
+
+    user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", auth_code.user_id, raise_404=True)
+
+    if user.kyc_status == KYCStatus.APPROVED:
+        raise HTTPException(400, "Your KYC is already approved")
+
+    if user.kyc_status == KYCStatus.PENDING:
+        raise HTTPException(
+            400, "You have an existing KYC request pending, please contact support")
+
+    kyc_info = UserKYCInfo(
+        residential_address=body.residential_address,
+        state=body.state,
+        document_type=body.document_type,
+    )
+
+    if kyc_info.document_type == KYCDocumentType.NIN:
+        kyc_info.NIN = encrypt(body.NIN.encode()).hex()
+
+    elif kyc_info.document_type == KYCDocumentType.BVN:
+        kyc_info.BVN = encrypt(body.BVN.encode()).hex()
+
+    user.kyc_info = kyc_info
+
+    user.kyc_status = KYCStatus.PENDING
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+
+"""
+
 @router.post("/kyc/document", status_code=200, response_model=AuthCode, response_model_by_alias=True)
 async def kyc_document(document_type:  DocumentTypes = Form(alias='documentType'), document_number:  str | None = Form(default=None, alias="documentNumber"), file: UploadFile = File(...), auth_code: AuthCode = Depends(get_auth_code)):
 
@@ -420,3 +456,5 @@ async def kyc_photo(file: UploadFile = File(...),   auth_code: AuthCode = Depend
     user.kyc_status = KYCStatus.PENDING
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+    """

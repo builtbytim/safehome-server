@@ -42,6 +42,10 @@ async def __get_auth_context(bg_tasks, token):
 
     session = AuthSession(**auth_session)
 
+    if user.get("is_active", False) is False:
+        raise HTTPException(
+            401, f"unauthenticated request :  user is inactive ", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
+
     if user_id != session.user_id:
         raise HTTPException(
             401, f"unauthenticated request :  user id mismatch ", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})

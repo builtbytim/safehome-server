@@ -22,11 +22,56 @@ def passes_phonenumber_test(value):
         return False
 
 
+class States(str, Enum):
+    ABIA = "ABIA"
+    ADAMAWA = "ADAMAWA"
+    AKWA_IBOM = "AKWA_IBOM"
+    ANAMBRA = "ANAMBRA"
+    BAUCHI = "BAUCHI"
+    BAYELSA = "BAYELSA"
+    BENUE = "BENUE"
+    BORNO = "BORNO"
+    CROSS_RIVER = "CROSS_RIVER"
+    DELTA = "DELTA"
+    EBONYI = "EBONYI"
+    EDO = "EDO"
+    EKITI = "EKITI"
+    ENUGU = "ENUGU"
+    FCT = "FCT"
+    GOMBE = "GOMBE"
+    IMO = "IMO"
+    JIGAWA = "JIGAWA"
+    KADUNA = "KADUNA"
+    KANO = "KANO"
+    KATSINA = "KATSINA"
+    KEBBI = "KEBBI"
+    KOGI = "KOGI"
+    KWARA = "KWARA"
+    LAGOS = "LAGOS"
+    NASARAWA = "NASARAWA"
+    NIGER = "NIGER"
+    OGUN = "OGUN"
+    ONDO = "ONDO"
+    OSUN = "OSUN"
+    OYO = "OYO"
+    PLATEAU = "PLATEAU"
+    RIVERS = "RIVERS"
+    SOKOTO = "SOKOTO"
+    TARABA = "TARABA"
+    YOBE = "YOBE"
+    ZAMFARA = "ZAMFARA"
+
+
 class UserRoles(str, Enum):
     ADMIN = "admin"
     USER = "user"
     GUEST = "guest"
     NONE = "none"
+
+
+class KYCDocumentType(str, Enum):
+    BVN = "BVN"
+    NIN = "NIN"
 
 
 class KYCStatus(str, Enum):
@@ -67,6 +112,7 @@ class ActionIdentifiers(str, Enum):
     VERIFY_EMAIL = "VERIFY_EMAIL"
     VERIFY_PHONE = "VERIFY_PHONE"
     VERIFY_KYC_DOCUMENT = "VERIFY_KYC_DOCUMENT"
+    ADD_KYC_INFO = "ADD_KYC_INFO"
     VERIFY_KYC_PHOTO = "VERIFY_KYC_PHOTO"
     AUTHENTICATION = "AUTHENTICATION"
 
@@ -181,6 +227,66 @@ class IdentityDocument(IdentityDocumentBase):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
+class KYCVerificationInput(BaseModel):
+    residential_address:  str = Field(
+        min_length=10, max_length=100, alias="residentialAddress")
+
+    state: States
+    document_type: KYCDocumentType = Field(alias="documentType")
+    BVN:  str | None = Field(default=None, min_length=11,
+                             max_length=11, alias="BVN")
+    NIN: str | None = Field(default=None, min_length=11,
+                            max_length=11, alias="NIN")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+    @validator('BVN', pre=False, always=True)
+    def validate_bvn(cls, v, values):
+        value = v
+
+        if value is None and values.get("documentType") == KYCDocumentType.BVN:
+            raise ValueError("BVN is required")
+
+        if value is None:
+            return value
+
+        if not value.isdigit():
+            raise ValueError("BVN must be digits")
+
+        return value
+
+    @validator('NIN', pre=False, always=True)
+    def validate_nin(cls, v, values):
+        value = v
+
+        if value is None and values.get("documentType") == KYCDocumentType.NIN:
+            raise ValueError("NIN is required")
+
+        if value is None:
+            return value
+
+        if not value.isdigit():
+            raise ValueError("NIN must be digits")
+
+        return value
+
+
+class UserKYCInfo(BaseModel):
+    residential_address:  str = Field(
+        min_length=10, max_length=100, alias="residentialAddress")
+
+    state: States
+    document_type: KYCDocumentType = Field(alias="documentType")
+    created_at:  float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+    BVN:  str | None = None
+    NIN: str | None = None
+    approved:  bool = Field(default=False)
+    flagged:  bool = Field(default=False)
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class PasswordResetStore(BaseModel):
     uid: str = Field(min_length=32, default_factory=get_uuid4)
     user_id: str = Field(min_length=32, alias="userId")
@@ -248,9 +354,10 @@ class UserInputModel(UserBaseModel):
 class UserDBModel(UserBaseModel):
     uid: str = Field(default_factory=get_uuid4)
     role: UserRoles = Field(default=UserRoles.USER)
-    kyc_document: IdentityDocument | None = Field(
-        default=None, alias="kycDocument")
-    kyc_photo: Union[str, None] = Field(default=None, alias="kycPhoto")
+    # kyc_document: IdentityDocument | None = Field(
+    #     default=None, alias="kycDocument")
+    # kyc_photo: Union[str, None] = Field(default=None, alias="kycPhoto")
+    kyc_info:  UserKYCInfo | None = Field(default=None, alias="kycInfo")
     address: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
     country: Union[str, None] = Field(
