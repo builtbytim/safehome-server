@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     kek3: str = "kek3"
 
     allowed_origins: list[str] = [
+        "https://safehomecoop.com", "https://www.safehomecoop.com", "https://app.safehomecoop.com",
         "http://localhost:3000", "http://localhost:3001", "https://safehome-gg.vercel.app", "https://app.safehome.timmypelumy.dev", "https://safehome.timmypelumy.dev"]
 
 
