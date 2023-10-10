@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.main import router
 from libs.huey_tasks.config import huey
 from libs.config.settings import get_settings
-from libs.huey_tasks.tasks import task_send_mail, task_test_huey, make_eligible_users_able_to_sign_in_after_kyc
+from libs.huey_tasks.tasks import task_send_mail, task_test_huey,  task_initiate_kyc_verification
 
 settings = get_settings()
 

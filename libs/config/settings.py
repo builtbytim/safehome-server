@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     jwt_access_token_expiration_hours: int = 24
     auth_code_validity_mins: int = 10
     jwt_secret_key: str = "jwtsecretkey"
+    flutterwave_public_key: str = "flutterwavepublickey"
+    flutterwave_secret_key: str = "flutterwavesecretkey"
+    flutterwave_encryption_key: str = "flutterwaveencryptionkey"
+    verifyme_secret_key: str = "verifymesecretkey"
     kek: str = "kek"
     kek1: str = "kek1"
     kek2: str = "kek2"

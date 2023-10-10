@@ -5,7 +5,7 @@ from libs.db import _db, Collections
 from libs.utils.pure_functions import *
 from libs.utils.security import scrypt_hash
 from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
-from libs.huey_tasks.tasks import task_send_mail
+from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
 from libs.deps.users import get_auth_context, get_auth_code
 from fastapi.security import OAuth2PasswordRequestForm
@@ -394,6 +394,8 @@ async def add_kyc_info(body:  KYCVerificationInput,  auth_code: AuthCode = Depen
     user.kyc_status = KYCStatus.PENDING
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+    task_initiate_kyc_verification(user.uid)
 
 
 """
