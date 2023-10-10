@@ -22,6 +22,13 @@ EMAIL_DEFS = {
 
     },
 
+    "kyc_rejected": {
+        "subject": "KYC Rejected",
+        "mail_from": settings.mail_from,
+        "template_name": "kyc_rejected.html",
+
+    },
+
     "reset_password": {
         "subject": "Reset Your Password",
         "mail_from": settings.mail_from,

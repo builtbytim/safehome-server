@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>KYC Rejected</title>
+  </head>
+
+  <body style="background-color: rgba(141, 64, 0, 0.08); font-size: 16px">
+    <div style="display: block; width: 100%; min-height: 200px">
+      <div
+        style="
+          padding: 8px 10px 8px 10px;
+          background-color: rgba(141, 64, 0, 0.2);
+        "
+      >
+        <h1
+          style="
+            font-size: 30px;
+            color: rgba(141, 64, 0);
+            text-align: center;
+            font-weight: bold;
+          "
+        >
+          KYC Rejected
+        </h1>
+      </div>
+
+      <div style="padding: 10px 20px 40px 20px">
+        <p style="font-size: 16px; padding: 10px 10px 10px 10px">
+          Dear {{ first_name }},
+        </p>
+
+        <p style="font-size: 16px; padding: 10px 10px 10px 10px">
+          Your KYC has been rejected for the following reason:
+
+          <br />
+
+          {{ reason }}
+
+          <br />
+
+          Please try again.
+        </p>
+
+        <p style="font-size: 16px; padding: 10px 10px 10px 10px">
+          Thank you for using SafeHome.
+        </p>
+
+        <p style="font-size: 16px; padding: 10px 10px 10px 10px">Regards,</p>
+
+        <p style="font-size: 16px; padding: 10px 10px 10px 10px">
+          SafeHome Team
+        </p>
+      </div>
+
+      <div style="padding: 10px 10px 10px 10px">
+        <hr style="opacity: 0.5" />
+
+        <div style="padding: 10px">
+          <p
+            style="
+              font-size: 10px;
+              opacity: 0.5;
+              padding: 10px;
+              line-height: 30px;
+            "
+          >
+            You are receiving this email because you have an account on
+            SafeHome. If you did not create an account, please ignore this
+            email.
+          </p>
+
+          <h1
+            style="
+              font-size: 30px;
+              color: rgba(141, 64, 0);
+              text-align: left;
+              font-weight: bold;
+              padding: 0px 10px 10px 10px;
+            "
+          >
+            SafeHome
+          </h1>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
