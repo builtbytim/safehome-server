@@ -56,3 +56,7 @@ class Logger:
     def fatal(self, msg, *args, **kwargs):
 
         self.logger.log(logging.CRITICAL, msg, *args, **kwargs)
+
+    def critical(self, msg, *args, **kwargs):
+
+        self.logger.log(logging.CRITICAL, msg, *args, **kwargs)
