@@ -9,14 +9,10 @@ from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
 from libs.deps.users import get_auth_context, get_auth_code
 from fastapi.security import OAuth2PasswordRequestForm
-from libs.cloudinary.uploader import upload_image
-from libs.utils.security import encrypt, decrypt
+from libs.utils.security import encrypt
 
 
 settings = get_settings()
-
-USER_EXLUCUDE_FIELDS = {"password_hash", "true_last_login",
-                        "is_superuser"}
 
 
 router = APIRouter(responses={
@@ -357,6 +353,26 @@ async def password_save(body:  PasswordResetSaveInput):
 
     task_send_mail(
         "reset_password_done", user.email, {"first_name": user.first_name, "support_email":  settings.support_email})
+
+
+@router.post("/security-questions", status_code=200)
+async def set_security_questions(body:  UserSecurityQuestionsInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+    user: UserDBModel = auth_context.user
+
+    input_data = UserSecurityQuestions(question1=body.question1, question2=body.question2, answer1=encrypt(
+        body.answer1.encode()).hex(), answer2=encrypt(body.answer2.encode()).hex())
+
+    if body.replace:
+        user.security_questions = input_data
+
+    elif user.security_questions is None:
+        user.security_questions = input_data
+
+    else:
+        raise HTTPException(
+            400, "Failed, you have already set your security questions.")
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
 
 @router.post("/kyc", status_code=200)

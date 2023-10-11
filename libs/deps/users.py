@@ -4,7 +4,7 @@ from pydantic import EmailStr
 from libs.db import _db, Collections
 from libs.utils.api_helpers import update_record
 from libs.config.settings import get_settings
-from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode
+from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode, USER_EXLUCUDE_FIELDS
 from libs.utils.security import _decode_jwt_token
 from datetime import datetime, timezone, timedelta
 from libs.utils.pure_functions import get_utc_timestamp
@@ -31,6 +31,7 @@ async def __get_auth_context(bg_tasks, token):
     if not user:
         raise HTTPException(401, f"unauthenticated request : user not found ", headers={
                             "WWW-Authenticate": "Bearer", "X-ACTION": "SIGN_IN"})
+    user = UserDBModel(**user).model_dump(exclude=USER_EXLUCUDE_FIELDS)
 
     session_id = payload["sub"]["session_id"]
 

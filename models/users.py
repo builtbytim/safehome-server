@@ -11,6 +11,9 @@ import phonenumbers
 
 settings = get_settings()
 
+USER_EXLUCUDE_FIELDS = {"password_hash",
+                        "is_superuser",  "is_staff", "is_admin",   "kyc_status", "kyc_info",  "password_reset_at", "password_changed_at", "security_questions"}
+
 
 def passes_phonenumber_test(value):
     """checks whether  a phone number is valid or not"""
@@ -20,6 +23,14 @@ def passes_phonenumber_test(value):
         return phonenumbers.is_valid_number(res)
     except phonenumbers.NumberParseException:
         return False
+
+
+class SecurityQuestions(str, Enum):
+    MOTHERS_MAIDEN_NAME = "WhatIsYourMotherSMaidenName"
+    BORN_CITY = "InWhichCityWereYouBorn"
+    FAVORITE_PET_NAME = "WhatIsYourFavoritePetSName"
+    FAVORITE_TEACHER = "WhoIsYourFavoriteTeacher"
+    FIRST_CAR_NAME = "WhatIsTheNameOfYourFirstCar"
 
 
 class States(str, Enum):
@@ -271,6 +282,21 @@ class KYCVerificationInput(BaseModel):
         return value
 
 
+class UserSecurityQuestions(BaseModel):
+    question1: SecurityQuestions
+    question2: SecurityQuestions
+    answer1: str = Field(min_length=2)
+    answer2: str = Field(min_length=2)
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class UserSecurityQuestionsInput(UserSecurityQuestions):
+    replace: bool = Field(default=False)
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class UserKYCInfo(BaseModel):
     residential_address:  str = Field(
         min_length=10, max_length=100, alias="residentialAddress")
@@ -358,6 +384,8 @@ class UserDBModel(UserBaseModel):
     #     default=None, alias="kycDocument")
     # kyc_photo: Union[str, None] = Field(default=None, alias="kycPhoto")
     kyc_info:  UserKYCInfo | None = Field(default=None, alias="kycInfo")
+    security_questions: UserSecurityQuestions | None = Field(
+        default=None, alias="securityQuestions")
     address: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
     country: Union[str, None] = Field(
