@@ -48,6 +48,7 @@ class BaseTransactionModel(BaseModel):
     wallet:  str | None = Field(alias="wallet", default=None)
     reference:  str = Field(
         default_factory=get_tx_reference, alias="reference")
+    tx_id: str | None = Field(alias="txId", default=None)
     amount:  float = Field(ge=0.0)
     currency: str = Field(default=settings.default_currency)
     status: TransactionStatus = Field(default=TransactionStatus.pending)

@@ -63,10 +63,11 @@ async def complete_topup_wallet(req:  Request, ):
 
     tx_status = query.get("status", None)
     tx_ref = query.get("tx_ref", None)
+    tx_id = query.get("transaction_id", None)
 
-    if not tx_status or not tx_ref:
+    if not tx_status or not tx_ref or not tx_id:
         logger.error(
-            f"Invalid payment request parameters - {tx_status} {tx_ref}")
+            f"Invalid payment request parameters - {tx_status} {tx_ref} {tx_id}")
         raise HTTPException(
             status_code=400, detail="Invalid payment request parameters")
 
@@ -75,7 +76,7 @@ async def complete_topup_wallet(req:  Request, ):
     transaction:  Transaction = await find_record(Transaction, Collections.transactions, "reference", tx_ref, raise_404=False)
 
     payment_rejection_url = f"{settings.app_url}/payments/failed"
-    payment_success_url = f"{settings.app_url}/payments/success"
+    payment_success_url = f"{settings.app_url}"
 
     failed_redirect = RedirectResponse(payment_rejection_url)
     success_redirect = RedirectResponse(payment_success_url)
@@ -88,7 +89,7 @@ async def complete_topup_wallet(req:  Request, ):
     if tx_status == "successful" or tx_status == "completed":
 
         # verify the transaction on flutterwave
-        result = _verify_transaction(tx_ref, transaction.initiator)
+        result = _verify_transaction(tx_id, transaction.initiator)
 
         if result["tx_ref"] != transaction.reference:
             logger.error(
@@ -108,6 +109,8 @@ async def complete_topup_wallet(req:  Request, ):
         # update the transaction status to completed
 
         transaction.status = TransactionStatus.successful
+
+        transaction.tx_id = tx_id
 
         # update  corresponding wallet
 

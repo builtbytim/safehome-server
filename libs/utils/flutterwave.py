@@ -10,10 +10,10 @@ logger = Logger(f"{__package__}.{__name__}")
 settings = get_settings()
 
 
-def _verify_transaction(tx_ref: str, user_id: str):
+def _verify_transaction(tx_id: str, user_id: str):
 
     url = make_url(
-        f"{Endpoints.flutterwave_tx_verification.value}/{tx_ref}/verify")
+        f"{Endpoints.flutterwave_tx_verification.value}/{tx_id}/verify")
 
     ok, status, data = make_req(
         url, "GET", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"})
@@ -22,7 +22,7 @@ def _verify_transaction(tx_ref: str, user_id: str):
 
     if not success:
         logger.error(
-            f"Unable to verify transaction {tx_ref} for user {user_id} due to {ok} {status} {data} ")
+            f"Unable to verify transaction {tx_id} for user {user_id} due to {ok} {status} {data} ")
         raise HTTPException(
             status_code=500, detail="Unable to verify transaction")
 
