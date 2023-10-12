@@ -282,6 +282,29 @@ class KYCVerificationInput(BaseModel):
         return value
 
 
+class NextOfKinInput(BaseModel):
+    first_name: str = Field(
+        min_length=2, max_length=35, alias="firstName")
+    last_name: str = Field(
+        min_length=2, max_length=35, alias="lastName")
+    phone: str = Field(min_length=10, max_length=15)
+    email: EmailStr
+    relationship: str = Field(min_length=2, max_length=35)
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class NextOfKinInfo(NextOfKinInput):
+    uid: str = Field(default_factory=get_uuid4)
+    user_id: str = Field(min_length=32, alias="userId")
+    created_at: float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+    updated_at: float = Field(
+        default_factory=get_utc_timestamp, alias="updatedAt")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class UserSecurityQuestions(BaseModel):
     question1: SecurityQuestions
     question2: SecurityQuestions

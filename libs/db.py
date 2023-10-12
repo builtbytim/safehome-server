@@ -16,6 +16,7 @@ class Collections(str, Enum):
     passwordresetstores = "password_reset_stores"
     waitlist_applications = "waitlist_applications"
     notification_preferences = "notification_preferences"
+    next_of_kins = "next_of_kins"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)

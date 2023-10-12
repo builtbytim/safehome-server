@@ -370,6 +370,15 @@ async def kyc_photo(avatar: UploadFile = File(...),   auth_context: Authenticati
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
 
+@router.post("/next-of-kin", status_code=200)
+async def set_next_of_kin(body:  NextOfKinInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+    user: UserDBModel = auth_context.user
+
+    next_of_kin = NextOfKinInfo(**body.model_dump(), user_id=user.uid)
+
+    await _db[Collections.next_of_kins].insert_one(next_of_kin.model_dump())
+
+
 @router.post("/security-questions", status_code=200)
 async def set_security_questions(body:  UserSecurityQuestionsInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
     user: UserDBModel = auth_context.user
