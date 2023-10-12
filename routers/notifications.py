@@ -15,7 +15,7 @@ router = APIRouter(responses={
 }, tags=["Notfications"])
 
 
-@router.get("/preferences", status_code=201, response_model=NotificationPreferences)
+@router.get("/preferences", status_code=200, response_model=NotificationPreferences)
 async def get_user_notifications_preferences(auth_context: AuthenticationContext = Depends(get_auth_context)):
     notification_preferences = await _db[Collections.notification_preferences].find_one({"user_id": auth_context.user.uid})
 

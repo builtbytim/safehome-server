@@ -12,7 +12,7 @@ class Collections(str, Enum):
     authsessions = "auth_sessions"
     id_documents = "identity_documents"
     throttles = "throttles"
-    authcodes = "authcodes"
+    authcodes = "auth_codes"
     passwordresetstores = "password_reset_stores"
     waitlist_applications = "waitlist_applications"
     notification_preferences = "notification_preferences"
