@@ -9,12 +9,13 @@ settings = get_settings()
 class Collections(str, Enum):
     users = "users"
     totps = "totps"
-    authsessions = "authsessions"
+    authsessions = "auth_sessions"
     id_documents = "identity_documents"
     throttles = "throttles"
     authcodes = "authcodes"
-    passwordresetstores = "passwordresetstores"
-    waitlist_applications = "waitlistapplications"
+    passwordresetstores = "password_reset_stores"
+    waitlist_applications = "waitlist_applications"
+    notification_preferences = "notification_preferences"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)
