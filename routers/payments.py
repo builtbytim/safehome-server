@@ -1,8 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from libs.config.settings import get_settings
 from models.users import AuthenticationContext
 from libs.db import _db, Collections
-from libs.utils.api_helpers import find_record
+from libs.utils.api_helpers import find_record, update_record
 from models.payments import *
 from models.wallets import Wallet
 from libs.utils.pure_functions import *
@@ -46,7 +46,7 @@ async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = 
         "tx_ref": transaction.reference,
         "amount": transaction.amount,
         "currency": transaction.currency,
-        "redirect_url": "https://safehome.com/payments/top-up/complete",
+        "redirect_url": f"{settings.server_url}/payments/top-up/complete",
         "customer": {
             "email": auth_context.user.email,
         },
@@ -86,3 +86,41 @@ async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = 
     await _db[Collections.transactions].insert_one(transaction.model_dump())
 
     return api_response
+
+
+@router.get("/top-up/complete", status_code=200)
+async def complete_topup_wallet(req:  Request, res:  Response):
+
+    query = req.query_params
+
+    tx_status = query.get("status", None)
+    tx_ref = query.get("tx_ref", None)
+
+    if not tx_status or not tx_ref:
+        logger.error(
+            f"Invalid payment request parameters - {tx_status} {tx_ref}")
+        raise HTTPException(
+            status_code=400, detail="Invalid payment request parameters")
+
+    # find the transaction
+
+    transaction:  Transaction = await find_record(Transaction, Collections.transactions, "reference", tx_ref, raise_404=False)
+
+    if not transaction:
+        logger.error(
+            f"Transaction with reference {tx_ref} not found")
+        raise HTTPException(
+            status_code=404, detail="Transaction not found")
+
+    if tx_status == "successful" or tx_status == "completed":
+
+        # verify the transaction on flutterwave
+        pass
+
+    else:
+
+        # update the transaction status to failed
+
+        transaction.status = TransactionStatus.failed
+
+        await update_record(Transaction, transaction.model_dump(), Collections.transactions, "reference", refresh_from_db=True)
