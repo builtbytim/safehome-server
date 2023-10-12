@@ -290,6 +290,7 @@ class NextOfKinInput(BaseModel):
     phone: str = Field(min_length=10, max_length=15)
     email: EmailStr
     relationship: str = Field(min_length=2, max_length=35)
+    replace: bool = Field(default=False)
 
     model_config = SettingsConfigDict(populate_by_name=True)
 

@@ -376,7 +376,20 @@ async def set_next_of_kin(body:  NextOfKinInput, auth_context:  AuthenticationCo
 
     next_of_kin = NextOfKinInfo(**body.model_dump(), user_id=user.uid)
 
-    await _db[Collections.next_of_kins].insert_one(next_of_kin.model_dump())
+    # attempt for fetch an existing next of kin for user
+
+    existing_next_of_kin = await _db[Collections.next_of_kins].find_one({"user_id": user.uid})
+
+    if not existing_next_of_kin:
+        await _db[Collections.next_of_kins].insert_one(next_of_kin.model_dump())
+        return
+
+    if body.replace:
+        await _db[Collections.next_of_kins].update_one(
+            {"user_id": user.uid}, {"$set": next_of_kin.model_dump()})
+        return
+
+    raise HTTPException(400, "Failed, you have already set your next of kin.")
 
 
 @router.post("/security-questions", status_code=200)
