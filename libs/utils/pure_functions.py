@@ -1,7 +1,10 @@
 import os
 from uuid import uuid4
 from datetime import datetime, timezone
+from libs.config.settings import get_settings
 import time
+
+settings = get_settings()
 
 
 def get_random_string(length: int = 32):
@@ -22,6 +25,10 @@ def get_complex_id():
 
 def get_simple_id():
     return os.urandom(8).hex()
+
+
+def get_tx_reference():
+    return f"{settings.tx_reference_prefix}{ 'L'  if not settings.debug else 'T'  }{get_complex_id()}"
 
 
 def is_age_in_range(utc_float_time, min_age, max_age):

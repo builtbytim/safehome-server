@@ -12,6 +12,7 @@ logger = Logger(f"{__package__}.{__name__}")
 class Endpoints(str, Enum):
     bvn_verification = "https://vapi.verifyme.ng/v1/verifications/identities/bvn"
     nin_verification = "https://vapi.verifyme.ng/v1/verifications/identities/nin"
+    flutterwave_payments = "https://api.flutterwave.com/v3/payments"
 
 
 def handle_response(ok, status, data, silent=False):

@@ -17,6 +17,8 @@ class Collections(str, Enum):
     waitlist_applications = "waitlist_applications"
     notification_preferences = "notification_preferences"
     next_of_kins = "next_of_kins"
+    wallets = "wallets"
+    transactions = "transactions"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)

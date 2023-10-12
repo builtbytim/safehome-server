@@ -4,6 +4,7 @@ from libs.utils.pure_functions import get_utc_timestamp
 from libs.config.settings import get_settings
 from libs.logging import Logger
 from libs.db import Collections
+from models.wallets import Wallet
 from huey.exceptions import CancelExecution
 from huey import crontab
 from .utils import exp_backoff_task
@@ -14,7 +15,7 @@ from models.users import UserDBModel, KYCDocumentType
 from libs.utils.security import decrypt
 
 
-logger = Logger(__name__)
+logger = Logger(f"{__package__}.{__name__}")
 
 settings = get_settings()
 
@@ -36,6 +37,35 @@ def task_test_huey():
 
     db["huey_test"].insert_one({"ts": get_utc_timestamp()})
     return
+
+
+# Task to execute  additional actions after a successful user registration
+@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+def task_post_user_registration(user_id:  str):
+
+    logger.info(f"Executing post-registration actions for user {user_id}")
+
+    user = db[Collections.users].find_one({"uid": user_id})
+
+    if not user:
+        logger.info(f"User {user_id} does not exist")
+        raise CancelExecution(retry=False)
+
+    # Wallet Creation Task
+
+    user_db = UserDBModel(**user)
+
+    # check if user has a wallet already
+    wallet = db[Collections.wallets].find_one({"user_id": user_id})
+
+    if not wallet:
+        logger.info(f"Creating wallet for user {user_id}")
+
+        # create a wallet for the user
+
+        wallet = Wallet(user_id=user_id)
+
+        db[Collections.wallets].insert_one(wallet.model_dump())
 
 
 # Task to send an email
@@ -211,30 +241,3 @@ def task_initiate_kyc_verification(user_id:  str):
             # Send an email to the user
             task_send_mail("kyc_rejected", user["email"], {
                 "first_name": user["first_name"], "reason":  "The details you provided do not match the details on your NIN"})
-
-
-"""
-# Task to mark users who have gone throught kyc as eligible to sign in to the platform
-@huey.periodic_task(crontab(minute='*/1'), retries=5, retry_delay=30,)
-def make_eligible_users_able_to_sign_in_after_kyc():
-
-    logger.info(f"Making eligible users able to sign in after KYC")
-
-    # Get all users who have gone through KYC
-    cursor = db[Collections.users].find(
-        {"kyc_status": "pending"}).sort("created_at", -1).limit(100)
-
-    for user in cursor:
-
-        if user["kyc_document"] is not None and user["kyc_photo"] is not None:
-
-            # Update the user's kyc status
-            db[Collections.users].update_one(
-                {"uid": user["uid"]}, {"$set": {"kyc_status": "approved"}})
-
-            # Send an email to the user
-            task_send_mail("kyc_approved", user["email"], {
-                           "first_name": user["first_name"]})
-
-
-"""

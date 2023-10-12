@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
     maintenance_mode: bool = False
+    default_currency: str = "NGN"
     debug: bool = True
     app_url: str = "http://localhost:3000"
     log_level: str = "DEBUG"
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
         "image/png", "image/jpeg", "image/gif"]
     dump_mail: str = "dump@Safehome.xyz"
     api_key_header_name: str = "x-Safehome-api"
-    tx_reference_prefix: str = "xpnd"
+    tx_reference_prefix: str = "SFH"
     tx_reference_length: int = 24
     tx_validity_lax_mins: int = 5
     db_url: str = "mongodb://localhost:4000"

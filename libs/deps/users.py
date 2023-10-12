@@ -5,6 +5,7 @@ from libs.db import _db, Collections
 from libs.utils.api_helpers import update_record
 from libs.config.settings import get_settings
 from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode, USER_EXLUCUDE_FIELDS
+from models.wallets import Wallet
 from libs.utils.security import _decode_jwt_token
 from datetime import datetime, timezone, timedelta
 from libs.utils.pure_functions import get_utc_timestamp
@@ -88,6 +89,16 @@ async def get_auth_context_optionally(bg_tasks: BackgroundTasks, token: str = De
         return None
 
     return await __get_auth_context(bg_tasks, token)
+
+
+async def get_user_wallet(context: AuthenticationContext = Depends(get_auth_context)) -> UserDBModel:
+
+    wallet = await _db[Collections.wallets].find_one({"user_id": context.user.uid})
+
+    if wallet:
+        return Wallet(**wallet)
+
+    return None
 
 
 async def _get_user_by_uid(uid: str) -> UserDBModel:
