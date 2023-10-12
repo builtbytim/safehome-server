@@ -10,6 +10,7 @@ from libs.utils.security import generate_totp, validate_totp, encode_to_base64, 
 from libs.deps.users import get_auth_context, get_auth_code
 from fastapi.security import OAuth2PasswordRequestForm
 from libs.utils.security import encrypt
+from libs.cloudinary.uploader import upload_image
 
 
 settings = get_settings()
@@ -353,6 +354,20 @@ async def password_save(body:  PasswordResetSaveInput):
 
     task_send_mail(
         "reset_password_done", user.email, {"first_name": user.first_name, "support_email":  settings.support_email})
+
+
+@router.post("/avatar", status_code=200, )
+async def kyc_photo(avatar: UploadFile = File(...),   auth_context: AuthenticationContext = Depends(get_auth_context)):
+
+    user = auth_context.user
+
+    upload_res = upload_image(avatar.file, {
+        "folder": f"{settings.images_dir}/{user.uid}"
+    })
+
+    user.avatar_url = upload_res["secure_url"]
+
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
 
 @router.post("/security-questions", status_code=200)
