@@ -65,7 +65,7 @@ async def complete_topup_wallet(req:  Request, ):
     tx_ref = query.get("tx_ref", None)
     tx_id = query.get("transaction_id", None)
 
-    if not tx_status or not tx_ref or not tx_id:
+    if not tx_status or not tx_ref:
         logger.error(
             f"Invalid payment request parameters - {tx_status} {tx_ref} {tx_id}")
         raise HTTPException(
