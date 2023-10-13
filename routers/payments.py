@@ -117,6 +117,7 @@ async def complete_topup_wallet(req:  Request, ):
         wallet: Wallet = await find_record(Wallet, Collections.wallets, "uid", transaction.wallet)
 
         wallet.balance += transaction.amount
+        wallet.last_transaction_at = transaction.created_at
 
         await update_record(Wallet, wallet.model_dump(), Collections.wallets, "uid", refresh_from_db=True)
 
