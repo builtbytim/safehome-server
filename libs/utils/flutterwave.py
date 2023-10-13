@@ -39,7 +39,7 @@ def _initiate_topup_payment(transaction: Transaction, auth_context: Authenticati
         "tx_ref": transaction.reference,
         "amount": transaction.amount,
         "currency": transaction.currency,
-        "redirect_url": f"{settings.server_url}/payments/top-up/complete",
+        "redirect_url": f"{settings.server_url}/wallet/top-up/complete",
         "customer": {
             "email": auth_context.user.email,
         },
