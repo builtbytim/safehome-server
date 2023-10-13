@@ -12,7 +12,7 @@ import phonenumbers
 settings = get_settings()
 
 USER_EXLUCUDE_FIELDS = {"password_hash",
-                        "is_superuser",  "is_staff", "is_admin",   "kyc_status", "kyc_info",  "password_reset_at", "password_changed_at", }
+                        "is_superuser",  "is_staff", "is_admin", "kyc_info",  "password_reset_at", "password_changed_at", }
 
 
 def passes_phonenumber_test(value):

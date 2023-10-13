@@ -91,7 +91,7 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
 
 
 @router.get("/transactions", status_code=200, response_model=PaginatedResult)
-async def get_wallet_transactions(page: int = 1, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def get_wallet_transactions(page: int = 1, limit: int = 10, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
@@ -109,7 +109,7 @@ async def get_wallet_transactions(page: int = 1, auth_context: AuthenticationCon
         sort_field="created_at",
         top_down_sort=False,
         include_crumbs=True,
-        per_page=10,
+        per_page=limit,
     )
 
     return await paginator.get_paginated_result(page, Transaction, exclude_fields=["wallet"])
