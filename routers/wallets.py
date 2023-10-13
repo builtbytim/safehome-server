@@ -4,6 +4,7 @@ from libs.config.settings import get_settings
 from models.users import AuthenticationContext
 from libs.db import _db, Collections
 from libs.utils.api_helpers import find_record, update_record
+from libs.utils.pagination import Paginator, PaginatedResult
 from models.payments import *
 from models.wallets import *
 from libs.utils.pure_functions import *
@@ -87,6 +88,31 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
             status_code=400, detail="You do not have a wallet yet! Please contact support.")
 
     return wallet
+
+
+@router.get("/transactions", status_code=200, response_model=PaginatedResult)
+async def get_wallet_transactions(page: int = 1, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+
+    if not wallet:
+        logger.error(f"User {auth_context.user.uid} does not have a wallet")
+
+        raise HTTPException(
+            status_code=400, detail="You do not have a wallet yet! Please contact support.")
+
+    filters = {
+        "wallet": wallet.uid,
+    }
+
+    paginator = Paginator(
+        col_name=Collections.transactions,
+        filters=filters,
+        sort_field="createdAt",
+        top_down_sort=False,
+        include_crumbs=True,
+        per_page=10,
+    )
+
+    return await paginator.get_paginated_result(page, Transaction, exclude_fields=["wallet"])
 
 
 @router.post("/withdraw", status_code=200)

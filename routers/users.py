@@ -156,15 +156,19 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
     auth_code = AuthCode(
         user_id=user.uid, action=ActionIdentifiers.AUTHENTICATION, )
 
+    email_auth_code = AuthCode(
+        user_id=user.uid, action=ActionIdentifiers.VERIFY_EMAIL, )
+
     await _db[Collections.authcodes].insert_one(auth_code.model_dump())
+    await _db[Collections.authcodes].insert_one(email_auth_code.model_dump())
 
     if not user.email_verified:
         raise HTTPException(
-            400, "Account not verified, please verify your email.", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": auth_code.code})
+            400, "Account not verified, please verify your email.", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": email_auth_code.code})
 
     if not user.is_active:
         raise HTTPException(
-            400, "Account is not active, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": auth_code.code})
+            400, "Account is not active, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": email_auth_code.code})
 
     if user.kyc_status is None:
         raise HTTPException(
