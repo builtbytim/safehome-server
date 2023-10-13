@@ -90,7 +90,9 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
 
 
 @router.post("/withdraw", status_code=200)
-async def topup_wallet(body:  WithdrawalInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def withdraw_from_wallet(req:  Request, body:  WithdrawalInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+
+    logger.warn("CLIENT IP: ", req.client.host)
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
