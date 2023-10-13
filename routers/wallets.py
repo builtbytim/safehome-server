@@ -5,13 +5,13 @@ from models.users import AuthenticationContext
 from libs.db import _db, Collections
 from libs.utils.api_helpers import find_record, update_record
 from models.payments import *
-from models.wallets import Wallet
+from models.wallets import *
 from libs.utils.pure_functions import *
 from libs.huey_tasks.tasks import task_send_mail
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
-from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction
+from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction, _get_supported_banks, _resolve_bank_account
 
 
 logger = Logger(f"{__package__}.{__name__}")
@@ -24,6 +24,59 @@ router = APIRouter(responses={
 }, tags=["Wallets"])
 
 
+@router.post("/banks", status_code=201, response_model=BankAccount)
+async def add_bank_account(body:  BankAccountInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+
+    account_result = _resolve_bank_account(body.bank_code, body.account_number)
+    banks_result = _get_supported_banks()
+
+    bank_from_results = next(
+        (bank for bank in banks_result if bank["code"] == body.bank_code), None)
+
+    if not bank_from_results:
+        logger.error(f"Invalid bank code - {body.bank_code}")
+        raise HTTPException(
+            status_code=400, detail="Invalid bank code")
+
+    bank_account = BankAccount(
+        user_id=auth_context.user.uid,
+        wallet=wallet.uid,
+        bank_name=bank_from_results["name"],
+        account_name=account_result["account_name"],
+        account_number=account_result["account_number"],
+        bank_code=body.bank_code,
+    )
+
+    await _db[Collections.bank_accounts].insert_one(bank_account.model_dump())
+
+    return bank_account
+
+
+@router.get("/banks", status_code=201, response_model=list[BankAccount])
+async def get_bank_accounts(auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+
+    bank_accounts = await _db[Collections.bank_accounts].find({"wallet": wallet.uid}).to_list(100)
+
+    return bank_accounts
+
+
+@router.get("/banks/supported", status_code=200, response_model=list[SupportedBank])
+async def get_supported_banks(auth_context: AuthenticationContext = Depends(get_auth_context)):
+    return _get_supported_banks()
+
+
+@router.post("/banks/resolve", status_code=200, response_model=ResolveBankAccountOutput)
+async def resolve_bank_account(body: BankAccountInput,  auth_context: AuthenticationContext = Depends(get_auth_context)):
+
+    result = _resolve_bank_account(body.bank_code, body.account_number)
+
+    resolved_bank = ResolveBankAccountOutput(
+        **result
+    )
+
+    return resolved_bank
+
+
 @router.get("", status_code=200, response_model=Wallet)
 async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
@@ -34,11 +87,6 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
             status_code=400, detail="You do not have a wallet yet! Please contact support.")
 
     return wallet
-
-
-@router.post("/withdraw", status_code=200, response_model=TopupOutput)
-async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
-    pass
 
 
 @router.post("/top-up", status_code=200, response_model=TopupOutput)

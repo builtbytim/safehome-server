@@ -10,6 +10,62 @@ logger = Logger(f"{__package__}.{__name__}")
 settings = get_settings()
 
 
+def _resolve_bank_account(bank_code: str, account_number: str):
+    url = make_url(
+        f"{Endpoints.flutterwave_resolve_bank_account.value}")
+
+    body = {
+        "account_number": account_number,
+        "account_bank": bank_code,
+    }
+
+    # temp fix
+    return {
+        "account_number": "0690000032",
+        "account_name": "Pastor Bright"
+    }
+
+    ok, status, data = make_req(
+        url, "POST", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"}, body=body)
+
+    if str(status) == "400":
+        raise HTTPException(
+            status_code=400, detail="Invalid bank account")
+
+    success = handle_response(ok, status, data)
+
+    if not success:
+        logger.error(
+            f"Unable to resolve bank account {account_number} due to {ok} {status} {data} ")
+        raise HTTPException(
+            status_code=500, detail="Unable to resolve bank account")
+
+    result = data["data"]
+
+    return result
+
+
+def _get_supported_banks(country: str = "NG"):
+
+    url = make_url(
+        f"{Endpoints.flutterwave_get_banks.value}/{country}")
+
+    ok, status, data = make_req(
+        url, "GET", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"})
+
+    success = handle_response(ok, status, data)
+
+    if not success:
+        logger.error(
+            f"Unable to get supported banks for country {country} due to {ok} {status}  ")
+        raise HTTPException(
+            status_code=500, detail="Unable to get supported banks")
+
+    result = data["data"]
+
+    return result
+
+
 def _verify_transaction(tx_id: str, user_id: str):
 
     url = make_url(

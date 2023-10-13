@@ -14,9 +14,11 @@ class Endpoints(str, Enum):
     nin_verification = "https://vapi.verifyme.ng/v1/verifications/identities/nin"
     flutterwave_payments = "https://api.flutterwave.com/v3/payments"
     flutterwave_tx_verification = "https://api.flutterwave.com/v3/transactions"
+    flutterwave_get_banks = "https://api.flutterwave.com/v3/banks"
+    flutterwave_resolve_bank_account = "https://api.flutterwave.com/v3/accounts/resolve"
 
 
-def handle_response(ok, status, data, silent=False):
+def handle_response(ok, status, data, silent=True):
     if not ok:
 
         if not silent:
