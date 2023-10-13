@@ -29,6 +29,19 @@ class TransactionDirection(str, Enum):
     outgoing = "outgoing"
 
 
+class WithdrawalInput(BaseModel):
+    amount: float = Field(gt=0.0)
+    bank_id: str = Field(alias="bankId")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class WithdrawalOutput(BaseModel):
+    redirect_url: str = Field(alias="redirectUrl")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class TopupInput(BaseModel):
     amount: float = Field(gt=0.0)
 
@@ -50,6 +63,7 @@ class BaseTransactionModel(BaseModel):
         default_factory=get_tx_reference, alias="reference")
     tx_id: str | None = Field(alias="txId", default=None)
     amount:  float = Field(ge=0.0)
+    fee: float = Field(default=0.0)
     currency: str = Field(default=settings.default_currency)
     status: TransactionStatus = Field(default=TransactionStatus.pending)
     direction: TransactionDirection

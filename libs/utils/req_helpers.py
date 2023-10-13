@@ -16,6 +16,7 @@ class Endpoints(str, Enum):
     flutterwave_tx_verification = "https://api.flutterwave.com/v3/transactions"
     flutterwave_get_banks = "https://api.flutterwave.com/v3/banks"
     flutterwave_resolve_bank_account = "https://api.flutterwave.com/v3/accounts/resolve"
+    flutterwave_transfers = "https://api.flutterwave.com/v3/transfers"
 
 
 def handle_response(ok, status, data, silent=True):

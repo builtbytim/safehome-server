@@ -11,7 +11,7 @@ from libs.huey_tasks.tasks import task_send_mail
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
-from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction, _get_supported_banks, _resolve_bank_account
+from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction, _get_supported_banks, _resolve_bank_account, _initiate_withdrawal
 
 
 logger = Logger(f"{__package__}.{__name__}")
@@ -89,6 +89,68 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
     return wallet
 
 
+@router.post("/withdraw", status_code=200)
+async def topup_wallet(body:  WithdrawalInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+
+    if not wallet:
+        logger.error(f"User {auth_context.user.uid} does not have a wallet")
+
+        raise HTTPException(
+            status_code=400, detail="You do not have a wallet yet! Please contact support.")
+
+    # check if the destination bank exists and it belongs to the user
+
+    bank_account: BankAccount = await find_record(BankAccount, Collections.bank_accounts, "uid", body.bank_id, raise_404=False)
+
+    if not bank_account:
+        logger.error(f"Bank account {body.bank_id} not found")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified does not exist.")
+
+    if bank_account.user_id != auth_context.user.uid:
+        logger.error(
+            f"Bank account {body.bank_id} does not belong to user {auth_context.user.uid}")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified does not belong to you.")
+
+    if bank_account.wallet != wallet.uid:
+        logger.error(
+            f"Bank account {body.bank_id} does not belong to wallet {wallet.uid}")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified does not belong to your wallet.")
+
+    if bank_account.is_active == False:
+        logger.error(f"Bank account {body.bank_id} is inactive")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified is inactive.")
+
+    # confirm the user has the amount to withdraw
+
+    if body.amount >= wallet.balance:
+        logger.error(f"Insufficient balance to withdraw {body.amount}")
+        raise HTTPException(
+            status_code=400, detail="You do not have enough balance to complete this withrawal.")
+
+    transaction = Transaction(
+        initiator=auth_context.user.uid,
+        wallet=wallet.uid,
+        amount=body.amount,
+        direction=TransactionDirection.outgoing,
+        type=TransactionType.withdrawal,
+        description="Wallet Withdrawal",
+    )
+
+    result = _initiate_withdrawal(transaction, auth_context, bank_account)
+
+    tx_status = result["status"]
+
+    if tx_status != "NEW":
+        logger.error(
+            f"Unable to initiate withdrawal for user {auth_context.user.uid} due to tx status {tx_status} ")
+        raise HTTPException(
+            status_code=500, detail="Unable to initiate withdrawal.")
+
+
 @router.post("/top-up", status_code=200, response_model=TopupOutput)
 async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
@@ -104,6 +166,7 @@ async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = 
         amount=body.amount,
         direction=TransactionDirection.incoming,
         type=TransactionType.topup,
+        description="Wallet Top Up",
     )
 
     # initiate the transaction on flutterwave

@@ -2,6 +2,7 @@ from models.payments import Transaction
 from models.users import AuthenticationContext
 from libs.config.settings import get_settings
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
+from models.wallets import BankAccount
 from libs.logging import Logger
 from fastapi import HTTPException
 
@@ -101,8 +102,8 @@ def _initiate_topup_payment(transaction: Transaction, auth_context: Authenticati
         },
 
         "customizations": {
-            "title": "Top Up SafeHome",
-            "description": "Top Up SafeHome wallet",
+            "title": "SafeHome",
+            "description": "Top Up your SafeHome",
         },
 
     }
@@ -121,6 +122,51 @@ def _initiate_topup_payment(transaction: Transaction, auth_context: Authenticati
     if not success:
         logger.error(
             f"Unable to initiate top-up payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+        raise HTTPException(
+            status_code=500, detail="Unable to initiate payment")
+
+    result = data["data"]
+
+    return result
+
+
+def _initiate_withdrawal(transaction: Transaction, auth_context: AuthenticationContext, bank_account: BankAccount):
+    # initiate the transaction on flutterwave
+
+    payment_payload = {
+
+        "reference": transaction.reference,
+        "amount": transaction.amount,
+        "debit_currency": transaction.currency,
+        "account_bank": bank_account.bank_code,
+        "account_number": bank_account.account_number,
+        "narration": f"{transaction.description}",
+        "callback_url": f"{settings.server_url}/wallet/withdrawal/complete",
+        "customer": {
+            "email": auth_context.user.email,
+        },
+
+        "customizations": {
+            "title": "SafeHome",
+            "description": "Complete your Withdrawal from SafeHome",
+        },
+
+    }
+
+    url = make_url(Endpoints.flutterwave_transfers.value)
+
+    headers = {
+        "Authorization": f"Bearer {settings.flutterwave_secret_key}",
+    }
+
+    ok, status, data = make_req(
+        url, "POST", headers=headers, body=payment_payload)
+
+    success = handle_response(ok, status, data)
+
+    if not success:
+        logger.error(
+            f"Unable to initiate withdrawal payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
         raise HTTPException(
             status_code=500, detail="Unable to initiate payment")
 
