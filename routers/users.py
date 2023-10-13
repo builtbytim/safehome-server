@@ -164,23 +164,23 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
 
     if not user.email_verified:
         raise HTTPException(
-            400, "Account not verified, please verify your email.", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": email_auth_code.code})
+            400, "Account is not verified yet, please verify your email.", headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": email_auth_code.code})
 
     if not user.is_active:
         raise HTTPException(
-            400, "Account is not active, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": email_auth_code.code})
+            400, "Account is  inactive, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": email_auth_code.code})
 
     if user.kyc_status is None:
         raise HTTPException(
-            400, "Please verify your identity first",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC", "X-AUTH-CODE": auth_code.code})
+            400, "You must submit your KYC before you can sign in.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC", "X-AUTH-CODE": auth_code.code})
 
     if not user.kyc_status == KYCStatus.APPROVED and not (user.kyc_status == KYCStatus.PENDING):
         raise HTTPException(
-            400, "Account KYC not approved, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC_PHOTO", "X-AUTH-CODE": auth_code.code})
+            400, "Your KYC was rejected, please reapply.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC", "X-AUTH-CODE": auth_code.code})
 
     if user.kyc_status == KYCStatus.PENDING:
         raise HTTPException(
-            400, "Account KYC is pending, please contact support.",  headers={"WWW-Authenticate": "Bearer",  "X-AUTH-CODE": auth_code.code})
+            400, "Your KYC is still pending, try again later.",  headers={"WWW-Authenticate": "Bearer",  "X-AUTH-CODE": auth_code.code})
 
     is_correct_password = scrypt_verify(
         body.password, user.password_hash, user.uid)
