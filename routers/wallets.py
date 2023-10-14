@@ -181,7 +181,7 @@ async def withdraw_from_wallet(body:  WithdrawalInput, auth_context: Authenticat
 
     # confirm the user has the amount to withdraw
 
-    if body.amount >= wallet.balance:
+    if body.amount > wallet.balance:
         logger.error(f"Insufficient balance to withdraw {body.amount}")
         raise HTTPException(
             status_code=400, detail="You do not have enough balance to complete this withrawal.")
