@@ -136,7 +136,7 @@ async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int
         col_name=Collections.transactions,
         filters=filters,
         sort_field="created_at",
-        top_down_sort=False,
+        top_down_sort=True,
         include_crumbs=True,
         per_page=limit,
     )
@@ -192,7 +192,7 @@ async def withdraw_from_wallet(body:  WithdrawalInput, auth_context: Authenticat
         amount=body.amount,
         direction=TransactionDirection.outgoing,
         type=TransactionType.withdrawal,
-        description="Wallet Withdrawal",
+        description="Withdrawal",
     )
 
     result = _initiate_withdrawal(transaction, auth_context, bank_account)
@@ -221,7 +221,7 @@ async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = 
         amount=body.amount,
         direction=TransactionDirection.incoming,
         type=TransactionType.topup,
-        description="Wallet Top Up",
+        description="Add Funds",
     )
 
     # initiate the transaction on flutterwave
