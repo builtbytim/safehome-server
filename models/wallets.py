@@ -11,6 +11,16 @@ import phonenumbers
 settings = get_settings()
 
 
+class FromLastNTime(str, Enum):
+    last_7_days = "7_days"
+    last_14_days = "14_days"
+    last_1_day = "1_day"
+    last_12_hours = "12_hours"
+    last_1_hour = "1_hour"
+    last_15_mins = "15_minutes"
+    all_time = "all_time"
+
+
 # Wallet for each user's  on-platform wallet
 class Wallet(BaseModel):
     uid:  str = Field(default_factory=get_uuid4)

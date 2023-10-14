@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends,  Request
+from fastapi import APIRouter, HTTPException, Depends,  Request, Query
 from fastapi.responses import RedirectResponse
 from libs.config.settings import get_settings
 from models.users import AuthenticationContext
@@ -91,7 +91,7 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
 
 
 @router.get("/transactions", status_code=200, response_model=PaginatedResult)
-async def get_wallet_transactions(page: int = 1, limit: int = 10, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int = Query(ge=1, default=1), start_date: float | None = Query(alias="startDate", default=None), end_date: float | None = Query(alias="endDate", default=None), tx_type: str = Query(alias="type", default="all"), from_last: FromLastNTime | None = Query(alias="fromLast", default=None),   auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
@@ -102,6 +102,35 @@ async def get_wallet_transactions(page: int = 1, limit: int = 10, auth_context: 
     filters = {
         "wallet": wallet.uid,
     }
+
+    if tx_type != "all":
+        filters["type"] = tx_type
+
+    def get_time_delta(from_last: FromLastNTime):
+        if from_last == FromLastNTime.last_7_days:
+            return 7 * 24 * 60 * 60
+        elif from_last == FromLastNTime.last_14_days:
+            return 14 * 24 * 60 * 60
+        elif from_last == FromLastNTime.last_1_day:
+            return 24 * 60 * 60
+        elif from_last == FromLastNTime.last_12_hours:
+            return 12 * 60 * 60
+        elif from_last == FromLastNTime.last_1_hour:
+            return 60 * 60
+        elif from_last == FromLastNTime.last_15_mins:
+            return 15 * 60
+
+    if from_last and from_last != FromLastNTime.all_time:
+        filters["created_at"] = {
+            "$gte": get_utc_timestamp() - get_time_delta(from_last),
+            "$lte": get_utc_timestamp(),
+        }
+
+    if start_date and end_date:
+        filters["created_at"] = {
+            "$gte": float(start_date),
+            "$lte": float(end_date),
+        }
 
     paginator = Paginator(
         col_name=Collections.transactions,

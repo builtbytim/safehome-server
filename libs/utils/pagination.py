@@ -12,6 +12,7 @@ settings = get_settings()
 class PaginatedResult(BaseModel):
     per_page: int = Field(ge=1, alias="perPage")
     num_items: int = Field(ge=0, alias="numItems")
+    entries:  int | None = Field(ge=0, )
     page: int = Field(ge=1)
     has_next: bool = Field(alias="hasNext")
     has_prev: bool = Field(alias="hasPrev")
@@ -28,6 +29,7 @@ class Paginator:
         self.sort_field = sort_field
         self.direction = -1 if top_down_sort else 1
         self.num_items = None
+        self.entries = None
         self.include_crumbs = include_crumbs
         self.current_page = 1
         self.init = False
@@ -48,7 +50,8 @@ class Paginator:
             num_items=self.num_items,
             per_page=self.per_page,
             page=page,
-            items=mapped_items
+            items=mapped_items,
+            entries=self.entries,
         )
 
     async def __initialize(self):
@@ -56,6 +59,7 @@ class Paginator:
             return
 
         self.init = True
+        self.entries = await _db[self.col_name].count_documents({})
         n = await _db[self.col_name].count_documents(self.filters)
 
         self.num_items = n
