@@ -258,8 +258,8 @@ async def complete_topup_wallet(req:  Request, ):
 
     transaction:  Transaction = await find_record(Transaction, Collections.transactions, "reference", tx_ref, raise_404=False)
 
-    payment_rejection_url = f"{settings.app_url}/payments/failed"
-    payment_success_url = f"{settings.app_url}"
+    payment_rejection_url = f"{settings.app_url}?showTx=true&txStatus=failed&txRef={tx_ref}"
+    payment_success_url = f"{settings.app_url}?showTx=true&txStatus=successful&txRef={tx_ref}"
 
     failed_redirect = RedirectResponse(payment_rejection_url)
     success_redirect = RedirectResponse(payment_success_url)
