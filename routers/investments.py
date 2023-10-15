@@ -186,6 +186,6 @@ async def get_investments(page: int = 1, limit: int = 10, include_asset: bool = 
             temp = await find_record(InvestibleAsset, Collections.investible_assets, "uid", item['assetUid'], raise_404=False)
 
             if temp:
-                item["asset"] = temp.model_dump()
+                item["asset"] = temp.model_dump(by_alias=True)
 
     return result
