@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Response, Request
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import RedirectResponse
 from libs.config.settings import get_settings
 from models.users import AuthenticationContext
@@ -48,11 +48,14 @@ async def create_investible_asset(body: InvestibleAssetInput, auth_context: Auth
 
 
 @router.get("/assets", status_code=200, response_model=PaginatedResult)
-async def get_investible_assets(page: int = 1, limit: int = 10, auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_investible_assets(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownerClub"), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     filters = {
-        "is_active": True
+        "is_active": True,
     }
+
+    if owners_club != OwnersClubs.all:
+        filters["owner_club"] = owners_club.value
 
     paginator = Paginator(
         col_name=Collections.investible_assets,

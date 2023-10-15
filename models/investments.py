@@ -8,6 +8,7 @@ class OwnersClubs(str, Enum):
     land_owners_club = "land_owners_club"
     home_owners_club = "home_owners_club"
     office_owners_club = "office_owners_club"
+    all = "all"
 
 
 class AssetProps(BaseModel):
@@ -25,7 +26,7 @@ class InvestibleAssetBase(BaseModel):
     price: float = Field(gt=0.0)
     units: int = Field(ge=0)
     about: str | None = Field(default=None)
-    club: OwnersClubs
+    owner_club: OwnersClubs = Field(alias="ownerClub")
     props:  AssetProps
 
     model_config = SettingsConfigDict(populate_by_name=True)
