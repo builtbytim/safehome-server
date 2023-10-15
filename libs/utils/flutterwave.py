@@ -88,6 +88,45 @@ def _verify_transaction(tx_id: str, user_id: str):
     return result
 
 
+def _initiate_payment(transaction: Transaction, auth_context: AuthenticationContext, customizations: dict = {}):
+    # initiate the transaction on flutterwave
+
+    payment_payload = {
+
+        "tx_ref": transaction.reference,
+        "amount": transaction.amount,
+        "currency": transaction.currency,
+        "redirect_url": f"{settings.server_url}/payments/complete",
+        "customer": {
+            "email": auth_context.user.email,
+        },
+
+        "customizations": customizations,
+
+    }
+
+    url = make_url(Endpoints.flutterwave_payments.value)
+
+    headers = {
+        "Authorization": f"Bearer {settings.flutterwave_secret_key}",
+    }
+
+    ok, status, data = make_req(
+        url, "POST", headers=headers, body=payment_payload)
+
+    success = handle_response(ok, status, data)
+
+    if not success:
+        logger.error(
+            f"Unable to initiate payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+        raise HTTPException(
+            status_code=500, detail="Unable to initiate payment")
+
+    result = data["data"]
+
+    return result
+
+
 def _initiate_topup_payment(transaction: Transaction, auth_context: AuthenticationContext):
     # initiate the transaction on flutterwave
 

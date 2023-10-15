@@ -22,6 +22,7 @@ class TransactionType(str, Enum):
     debit = "debit"
     topup = "topup"
     withdrawal = "withdrawal"
+    investment = "investment"
 
 
 class TransactionDirection(str, Enum):

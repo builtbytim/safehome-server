@@ -4,6 +4,8 @@ from libs.config.settings import get_settings
 from models.users import AuthenticationContext
 from libs.db import _db, Collections
 from libs.utils.api_helpers import find_record, update_record
+from models.payments import Transaction
+from libs.utils.flutterwave import _initiate_payment
 from models.payments import *
 from models.investments import *
 from models.wallets import Wallet
@@ -78,3 +80,99 @@ async def get_investible_asset(uid: str, auth_context: AuthenticationContext = D
                             detail="The investment asset you requested does not exist!")
 
     return InvestibleAsset(**asset)
+
+
+@router.post("/assets/invest", status_code=200, response_model=TopupOutput | None)
+async def create_investment(body: InvestmentInput, auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
+
+    if not user_wallet:
+        raise HTTPException(status_code=400,
+                            detail="You cannot create an investment as you do not have a wallet.")
+
+    asset: InvestibleAsset = await find_record(InvestibleAsset, Collections.investible_assets, "uid", body.asset_uid, raise_404=False)
+
+    if not asset:
+        raise HTTPException(status_code=404,
+                            detail="The investment asset you requested does not exist!")
+
+    if body.units > asset.available_units:
+        raise HTTPException(status_code=400,
+                            detail=f"The investment asset you requested does not have enough units! Only {asset.available_units} units are available.")
+
+    amount = round(body.units * (asset.price/asset.units), 2)
+
+    transaction = Transaction(
+        initiator=auth_context.user.uid,
+        wallet=user_wallet.uid,
+        amount=body.amount,
+        direction=TransactionDirection.incoming,
+        type=TransactionType.investment,
+        description=f"Investment in {asset.asset_name}",
+    )
+
+    investment = Investment(
+        asset_uid=asset.uid, units=body.units, investor_uid=auth_context.user.uid, payment_reference=transaction.reference, roi=asset.props.roi, investment_exit=asset.props.investment_exit, amount=amount, investment_exit_date=get_utc_timestamp())
+
+    # if the funding source is the wallet then we need to check if the user has enough funds in the wallet
+
+    if body.fund_source == FundSource.wallet:
+
+        if user_wallet.balance < amount:
+            raise HTTPException(status_code=400,
+                                detail=f"You do not have enough funds in your wallet to make this investment. Please add funds to your wallet and try again.")
+
+        transaction.tx_id = get_uuid4()
+        transaction.status = TransactionStatus.successful
+
+        user_wallet.balance -= amount
+
+        # update the wallet balance
+        await update_record(Wallet, user_wallet.model_dump(), Collections.wallets, "uid")
+
+        # update the asset available units
+        asset.available_units -= body.units
+        asset.investor_count += 1
+
+        await update_record(InvestibleAsset, asset.model_dump(), Collections.investible_assets, "uid")
+
+        # update the investment
+        investment.is_active = True
+
+    else:
+
+        # initiate the transaction on flutterwave
+
+        result = _initiate_payment(transaction, auth_context, customizations={
+            "title": "SafeHome",
+            "description": "Investment in SafeHome",
+        })
+
+        api_response = {
+            "redirect_url": result["link"],
+        }
+
+        # save the investment and the tx
+
+        await _db[Collections.investments].insert_one(investment.model_dump())
+        await _db[Collections.transactions].insert_one(transaction.model_dump())
+
+        return api_response
+
+
+@router.get("", status_code=200, response_model=PaginatedResult)
+async def get_investments(page: int = 1, limit: int = 10, auth_context: AuthenticationContext = Depends(get_auth_context)):
+
+    filters = {
+        "investor_uid": auth_context.user.uid,
+    }
+
+    paginator = Paginator(
+        col_name=Collections.investments,
+        filters=filters,
+        sort_field="created_at",
+        top_down_sort=True,
+        include_crumbs=True,
+        per_page=limit,
+    )
+
+    return await paginator.get_paginated_result(page, Investment)
