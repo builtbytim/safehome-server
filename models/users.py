@@ -425,8 +425,8 @@ class UserDBModel(UserBaseModel):
     email_verified: bool = Field(default=False, alias="emailVerified")
     kyc_status: KYCStatus | None = Field(default=None, alias="kycStatus")
     phone_verified: bool = Field(default=False, alias="phoneVerified")
-    password_hash: Union[None, str] = Field(
-        default=None, min_length=32, alias="passwordHash")
+    password_hash:  str = Field(
+        min_length=32, alias="passwordHash")
     is_active: bool = Field(default=False, alias="isActive")
     created_at: float = Field(default_factory=time, alias="createdAt")
     last_login: Union[float, None] = Field(alias="lastLogin", default=None)

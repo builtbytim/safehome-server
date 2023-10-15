@@ -88,7 +88,7 @@ def scrypt_hash(password: str, salt: str, n: int = 2 ** 14, r: int = 8, p: int =
     try:
 
         kdf = Scrypt(
-            salt=(salt + ":" + settings.password_salt).encode(),
+            salt=(salt + settings.password_salt).encode(),
             length=32,
             n=n, r=r, p=p
         )
@@ -104,7 +104,7 @@ def scrypt_verify(guessed_password: str,  expected_hash: str, salt: str, n: int 
     try:
 
         kdf = Scrypt(
-            salt=(salt + ":" + settings.password_salt).encode(),
+            salt=(salt + settings.password_salt).encode(),
             length=32,
             n=n, r=r, p=p
         )

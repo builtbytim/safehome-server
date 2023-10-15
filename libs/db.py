@@ -20,6 +20,7 @@ class Collections(str, Enum):
     wallets = "wallets"
     transactions = "transactions"
     bank_accounts = "bank_accounts"
+    investible_assets = "investible_assets"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)
