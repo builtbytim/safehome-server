@@ -21,6 +21,7 @@ class Collections(str, Enum):
     transactions = "transactions"
     bank_accounts = "bank_accounts"
     investible_assets = "investible_assets"
+    investments = "investments"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)

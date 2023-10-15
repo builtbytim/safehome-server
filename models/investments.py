@@ -90,7 +90,7 @@ class Investment(InvestmentBase):
     payment_reference: str | None = Field(
         alias="paymentReference", default=None)
     amount: float = Field(gt=0.0)
-    roi: float = Field(gt=0.0)
+    roi: str
     investment_exit: str = Field(alias="investmentExit")
     investment_exit_date: float = Field(
         alias="investmentExitDate")
