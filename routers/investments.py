@@ -33,18 +33,16 @@ async def create_investible_asset(body: InvestibleAssetInput, auth_context: Auth
                             detail="You cannot create an investment asset as you do not have a wallet.")
 
     asset_props = AssetProps(
-        body.props.model_dump(),
+        **body.props.model_dump(),
     )
 
     # create the investment
     investment = InvestibleAsset(
-        **body.model_dump(), investor_count=0, cover_image_url=None, asset_image_urls=[], author=auth_context.user.uid, props=asset_props)
+        **body.model_dump(), investor_count=0, cover_image_url=None, asset_image_urls=[], author=auth_context.user.uid)
 
-    investment = await _db[Collections.investible_assets].insert_one(investment.model_dump())
+    await _db[Collections.investible_assets].insert_one(investment.model_dump())
 
-    investment = await _db[Collections.investible_assets].find_one({"uid": investment.inserted_id})
-
-    return InvestibleAsset(**investment)
+    return InvestibleAsset(**investment.model_dump())
 
 
 @router.get("/assets", status_code=200, response_model=PaginatedResult)
