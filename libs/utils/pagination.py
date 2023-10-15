@@ -47,7 +47,7 @@ class Paginator:
             has_next=await self.has_next(),
             has_prev=await self.has_prev(),
             num_pages=await self.get_num_pages(),
-            num_items=self.num_items,
+            num_items=len(items),
             per_page=self.per_page,
             page=page,
             items=mapped_items,
@@ -59,7 +59,7 @@ class Paginator:
             return
 
         self.init = True
-        self.entries = await _db[self.col_name].count_documents({})
+        self.entries = await _db[self.col_name].count_documents(self.filters)
         n = await _db[self.col_name].count_documents(self.filters)
 
         self.num_items = n
