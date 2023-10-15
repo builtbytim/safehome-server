@@ -138,6 +138,9 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
         # update the investment
         investment.is_active = True
 
+        await _db[Collections.investments].insert_one(investment.model_dump())
+        await _db[Collections.transactions].insert_one(transaction.model_dump())
+
     else:
 
         # initiate the transaction on flutterwave

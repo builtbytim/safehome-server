@@ -25,7 +25,7 @@ class FromLastNTime(str, Enum):
 class Wallet(BaseModel):
     uid:  str = Field(default_factory=get_uuid4)
     user_id:  str = Field(alias="userId")
-    balance:  float = Field(default=0.0, ge=0.0,)
+    balance:  float = Field(default=0.0, ge=0.0)
     currency: str = Field(default=settings.default_currency)
     last_transaction_at: float = Field(
         default_factory=get_utc_timestamp, alias="lastTransactionAt")
@@ -36,6 +36,11 @@ class Wallet(BaseModel):
         default_factory=get_utc_timestamp, alias="updatedAt")
 
     model_config = SettingsConfigDict(populate_by_name=True)
+
+    # make balance always 2 decimal places when serializing
+    @validator('balance')
+    def balance_must_be_2dp(cls, v):
+        return round(v, 2)
 
 
 class BankAccountInput(BaseModel):
