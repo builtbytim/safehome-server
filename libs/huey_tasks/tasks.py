@@ -53,8 +53,6 @@ def task_post_user_registration(user_id:  str):
 
     # Wallet Creation Task
 
-    user_db = UserDBModel(**user)
-
     # check if user has a wallet already
     wallet = db[Collections.wallets].find_one({"user_id": user_id})
 

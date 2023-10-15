@@ -404,9 +404,6 @@ class UserInputModel(UserBaseModel):
 class UserDBModel(UserBaseModel):
     uid: str = Field(default_factory=get_uuid4)
     role: UserRoles = Field(default=UserRoles.USER)
-    # kyc_document: IdentityDocument | None = Field(
-    #     default=None, alias="kycDocument")
-    # kyc_photo: Union[str, None] = Field(default=None, alias="kycPhoto")
     kyc_info:  UserKYCInfo | None = Field(default=None, alias="kycInfo")
     security_questions: UserSecurityQuestions | None = Field(
         default=None, alias="securityQuestions")
@@ -425,8 +422,8 @@ class UserDBModel(UserBaseModel):
     email_verified: bool = Field(default=False, alias="emailVerified")
     kyc_status: KYCStatus | None = Field(default=None, alias="kycStatus")
     phone_verified: bool = Field(default=False, alias="phoneVerified")
-    password_hash:  str = Field(
-        min_length=32, alias="passwordHash")
+    password_hash:  str | None = Field(
+        min_length=32, alias="passwordHash", default=None)
     is_active: bool = Field(default=False, alias="isActive")
     created_at: float = Field(default_factory=time, alias="createdAt")
     last_login: Union[float, None] = Field(alias="lastLogin", default=None)

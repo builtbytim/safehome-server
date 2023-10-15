@@ -271,6 +271,7 @@ async def password_reset(body:  RequestPasswordResetInput):
 
     user: UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.email, raise_404=False)
 
+    # ignore the reset request of the user does not exist
     if user is None:
         return
 
@@ -284,7 +285,7 @@ async def password_reset(body:  RequestPasswordResetInput):
 
     if not user.kyc_status == KYCStatus.APPROVED:
         raise HTTPException(
-            400, "Account KYC not approved, please contact support.")
+            400, "Your KYC has not been approved, please contact support.")
 
     if get_utc_timestamp() - user.password_reset_at < (60 * 2):
         raise HTTPException(
@@ -325,15 +326,15 @@ async def password_save(body:  PasswordResetSaveInput):
 
     if not user.email_verified:
         raise HTTPException(
-            400, "Account is not verified, please verify your email.")
+            400, "You have not verified your email, please verify your email.")
 
     if not user.is_active:
         raise HTTPException(
-            400, "Account is not active, please contact support.")
+            400, "Your account is not active, please contact support.")
 
     if not user.kyc_status == KYCStatus.APPROVED:
         raise HTTPException(
-            400, "Account KYC not approved, please contact support.")
+            400, "Your KYC has not been approved, please contact support.")
 
     reset_store: PasswordResetStore | None = await find_record(PasswordResetStore, Collections.passwordresetstores, "token", body.token, raise_404=False)
 
