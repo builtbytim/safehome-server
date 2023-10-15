@@ -225,7 +225,8 @@ async def sign_out(auth_context:  AuthenticationContext = Depends(get_auth_conte
 @router.post("/password/change", status_code=200)
 async def change_password(body:  PasswordChangeInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
-    user:  UserDBModel = auth_context.user
+    user:  UserDBModel = find_record(
+        UserDBModel, Collections.users, "uid", auth_context.user.uid, raise_404=True)
 
     if get_utc_timestamp() - user.password_changed_at < (60 * 5):
         raise HTTPException(

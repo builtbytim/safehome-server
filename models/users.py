@@ -401,7 +401,7 @@ class UserInputModel(UserBaseModel):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
-class UserDBModel(UserBaseModel):
+class UserOutputModel(UserBaseModel):
     uid: str = Field(default_factory=get_uuid4)
     role: UserRoles = Field(default=UserRoles.USER)
     kyc_info:  UserKYCInfo | None = Field(default=None, alias="kycInfo")
@@ -422,8 +422,6 @@ class UserDBModel(UserBaseModel):
     email_verified: bool = Field(default=False, alias="emailVerified")
     kyc_status: KYCStatus | None = Field(default=None, alias="kycStatus")
     phone_verified: bool = Field(default=False, alias="phoneVerified")
-    password_hash:  str | None = Field(
-        min_length=32, alias="passwordHash", default=None)
     is_active: bool = Field(default=False, alias="isActive")
     created_at: float = Field(default_factory=time, alias="createdAt")
     last_login: Union[float, None] = Field(alias="lastLogin", default=None)
@@ -434,6 +432,25 @@ class UserDBModel(UserBaseModel):
         default_factory=get_utc_timestamp, alias="passwordChangedAt")
     password_reset_at: float = Field(
         default_factory=get_utc_timestamp, alias="passwordResetAt")
+
+    @validator('phone')
+    def validate_phone(v, values):
+        value = v
+
+        if value is None:
+            return value
+
+        if not passes_phonenumber_test(value):
+            raise ValueError("invalid phone number")
+
+        return value
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class UserDBModel(UserOutputModel):
+    password_hash:  str = Field(
+        min_length=32, alias="passwordHash")
 
     @validator('phone')
     def validate_phone(v, values):
@@ -515,4 +532,4 @@ class Throttler(BaseModel):
 class AuthenticationContext(BaseModel):
 
     session: AuthSession
-    user: UserDBModel
+    user: UserOutputModel
