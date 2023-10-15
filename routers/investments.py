@@ -105,7 +105,7 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
         initiator=auth_context.user.uid,
         wallet=user_wallet.uid,
         amount=amount,
-        direction=TransactionDirection.incoming,
+        direction=TransactionDirection.outgoing,
         type=TransactionType.investment,
         description=f"Investment in {asset.asset_name}",
     )
