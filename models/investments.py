@@ -26,7 +26,9 @@ class InvestibleAssetBase(BaseModel):
     price: float = Field(gt=0.0)
     units: int = Field(ge=0)
     about: str | None = Field(default=None)
-    owner_club: OwnersClubs = Field(alias="ownerClub")
+    # owner_club: OwnersClubs = Field(alias="ownerClub")
+    owner_club: str
+
     props:  AssetProps
 
     model_config = SettingsConfigDict(populate_by_name=True)
@@ -41,8 +43,8 @@ class InvestibleAsset(InvestibleAssetBase):
     investor_count: int = Field(ge=0, alias="investorCount")
     cover_image_url: str | None = Field(default=None, alias="coverImageUrl")
     is_active: bool = True
-    asset_image_urls: list[str] = Field(
-        min_length=0, alias="assetImageUrls")
+    asset_image_urls: list[str] | None = Field(default=None,
+                                               min_length=0, alias="assetImageUrls")
     created_at: float = Field(default_factory=get_utc_timestamp)
     updated_at: float = Field(default_factory=get_utc_timestamp)
     author: str | None = Field(default=None)
