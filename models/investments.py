@@ -87,6 +87,7 @@ class InvestmentInput(InvestmentBase):
 class Investment(InvestmentBase):
     uid: str = Field(default_factory=get_uuid4)
     investor_uid: str = Field(alias="investorUid")
+    asset: InvestibleAsset | None = Field(default=None)
     payment_reference: str | None = Field(
         alias="paymentReference", default=None)
     amount: float = Field(gt=0.0)

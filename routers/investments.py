@@ -163,7 +163,7 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 
 
 @router.get("", status_code=200, response_model=PaginatedResult)
-async def get_investments(page: int = 1, limit: int = 10, auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_investments(page: int = 1, limit: int = 10, include_asset: bool = Query(alias="includeAsset", default=True), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     filters = {
         "investor_uid": auth_context.user.uid,
@@ -178,4 +178,14 @@ async def get_investments(page: int = 1, limit: int = 10, auth_context: Authenti
         per_page=limit,
     )
 
-    return await paginator.get_paginated_result(page, Investment)
+    result = await paginator.get_paginated_result(page, Investment)
+
+    if include_asset:
+        for item in result.items:
+
+            temp = await find_record(InvestibleAsset, Collections.investible_assets, "uid", item['assetUid'], raise_404=False)
+
+            if temp:
+                item["asset"] = temp.model_dump()
+
+    return result
