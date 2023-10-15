@@ -27,7 +27,7 @@ class InvestibleAssetBase(BaseModel):
     units: int = Field(ge=0)
     about: str | None = Field(default=None)
     # owner_club: OwnersClubs = Field(alias="ownerClub")
-    owner_club: str
+    owner_club: str = Field(alias="ownerClub")
 
     props:  AssetProps
 
@@ -45,8 +45,10 @@ class InvestibleAsset(InvestibleAssetBase):
     is_active: bool = True
     asset_image_urls: list[str] | None = Field(default=None,
                                                min_length=0, alias="assetImageUrls")
-    created_at: float = Field(default_factory=get_utc_timestamp)
-    updated_at: float = Field(default_factory=get_utc_timestamp)
+    created_at: float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+    updated_at: float = Field(
+        default_factory=get_utc_timestamp, alias="updatedAt")
     author: str | None = Field(default=None)
 
     def get_price_per_unit(self):
@@ -55,7 +57,7 @@ class InvestibleAsset(InvestibleAssetBase):
     def model_dump(self, *args, **kwargs):
         temp = super().model_dump(*args, **kwargs)
         temp.update({
-            "price_per_unit": self.get_price_per_unit()
+            "pricePerUnit": self.get_price_per_unit()
         })
         return temp
 
