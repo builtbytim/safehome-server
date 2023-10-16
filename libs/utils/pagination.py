@@ -25,7 +25,7 @@ class PaginatedResult(BaseModel):
 
 class Paginator:
 
-    def __init__(self,   col_name:  Collections,  sort_field: str, top_down_sort: bool = True, per_page: int = 2,  filters: dict = {}, include_crumbs=True) -> None:
+    def __init__(self,   col_name:  Collections,  sort_field: str, top_down_sort: bool = True, per_page: int = 2,  filters: dict = {}, include_crumbs=True, filter_func=None) -> None:
         self.per_page = per_page
         self.sort_field = sort_field
         self.direction = -1 if top_down_sort else 1
@@ -39,6 +39,7 @@ class Paginator:
         self.filters = filters
         self.query = None
         self.num_pages = None
+        self.filter_func = filter_func
 
     async def get_paginated_result(self, page: int, items_cls=None, exclude_fields=None):
         items = await self.get_page(page)
@@ -64,7 +65,13 @@ class Paginator:
         self.init = True
         self.unfiltered_entries = await _db[self.col_name].count_documents({})
 
-        n = await _db[self.col_name].count_documents(self.filters)
+        n = None
+
+        if self.filter_func:
+            n = await _db[self.col_name].count_documents(self.filters)
+
+        else:
+            n = await _db[self.col_name].count_documents(self.filters)
 
         self.entries = n
 
@@ -74,9 +81,9 @@ class Paginator:
             self.filters).sort(self.sort_field, self.direction)
         await self.get_num_pages()
 
-    async def get_num_pages(self):
+    async def get_num_pages(self, refresh=False):
 
-        if self.num_pages:
+        if self.num_pages and not refresh:
             return self.num_pages
 
         await self.__initialize()
@@ -99,7 +106,7 @@ class Paginator:
         #     raise HTTPException(
         #         400,  f"page exceeded number of pages ({page} > {self.num_pages})")
 
-        if self.num_pages == 1 and page == 1:
+        if self.num_pages == 1 and page == 1 and not self.filter_func:
             return await self.query.to_list(length=self.num_items)
 
         if page > self.num_pages:
@@ -111,7 +118,24 @@ class Paginator:
         e_index = min(s_index + self.per_page, self.num_items)
 
         self.current_page = page
-        return await self.query.skip(s_index).to_list(length=e_index - s_index)
+
+        page_items = await self.query.skip(s_index).to_list(length=e_index - s_index)
+
+        if self.filter_func:
+
+            filtered_items = []
+
+            for item in page_items:
+                if await self.filter_func(item):
+                    filtered_items.append(item)
+
+            page_items = filtered_items
+
+            self.entries = len(page_items)
+            self.num_items = len(page_items)
+            await self.get_num_pages(refresh=True)
+
+        return page_items
 
     async def has_next(self):
         if not self.init:

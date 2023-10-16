@@ -175,7 +175,15 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
 
     filters = {
         "investor_uid": auth_context.user.uid,
+        "completed":  completed,
+
     }
+
+    async def filter_for_items_with_correct_owner_club(item,):
+
+        asset = await _db[Collections.investible_assets].find_one({"uid":  item["asset_uid"]})
+
+        return asset["owner_club"] == owners_club.value
 
     paginator = Paginator(
         col_name=Collections.investments,
@@ -184,6 +192,7 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
         top_down_sort=True,
         include_crumbs=True,
         per_page=limit,
+        filter_func=filter_for_items_with_correct_owner_club if owners_club != OwnersClubs.all else None,
     )
 
     result = await paginator.get_paginated_result(page, InvestmentWithAsset)
@@ -193,15 +202,9 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
     if include_asset:
         for item in result.items:
 
-            asset = await _db[Collections.investible_assets].find_one({"uid": item['assetUid']})
+            asset = await _db[Collections.investible_assets].find_one({"uid":  item['assetUid']})
+
             item['assetInfo'] = InvestibleAsset(
                 **asset).model_dump(by_alias=True)
-
-        # filter out the items that have no matching owner club in the query
-        if owners_club != OwnersClubs.all:
-            result.items = [
-                x for x in result.items if (x['assetInfo']['ownerClub'] == owners_club.value and x['completed'] == completed)]
-
-        result.entries = len(result.items)
 
     return result

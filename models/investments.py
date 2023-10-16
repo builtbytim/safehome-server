@@ -81,7 +81,7 @@ class InvestmentBase(BaseModel):
 
 class InvestmentInput(InvestmentBase):
     fund_source: FundSource = Field(alias="fundSource")
-
+    reinvesting: bool = False
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
