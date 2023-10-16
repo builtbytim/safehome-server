@@ -171,7 +171,7 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 
 
 @router.get("", status_code=200, response_model=PaginatedResult)
-async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), completed: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     filters = {
         "investor_uid": auth_context.user.uid,
@@ -200,7 +200,7 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
         # filter out the items that have no matching owner club in the query
         if owners_club != OwnersClubs.all:
             result.items = [
-                x for x in result.items if x['assetInfo']['ownerClub'] == owners_club.value]
+                x for x in result.items if (x['assetInfo']['ownerClub'] == owners_club.value and x['completed'] == completed)]
 
         result.entries = len(result.items)
 
