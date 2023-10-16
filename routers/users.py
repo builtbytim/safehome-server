@@ -209,7 +209,10 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
 
 @router.get("/session", response_model=AuthenticationContext, response_model_by_alias=True)
 async def get_session(auth_context:  AuthenticationContext = Depends(get_auth_context)):
-    return auth_context
+    return AuthenticationContext(
+        user=UserOutputModel(**auth_context.get_user_dict()),
+        session=auth_context.session,
+    )
 
 
 @router.post("/sign-out", status_code=200)
@@ -367,7 +370,7 @@ async def password_save(body:  PasswordResetSaveInput):
 
 
 @router.post("/avatar", status_code=200, )
-async def kyc_photo(avatar: UploadFile = File(...),   auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def avatar_upload(avatar: UploadFile = File(...),   auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     user = auth_context.user
 

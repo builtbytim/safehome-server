@@ -532,4 +532,7 @@ class Throttler(BaseModel):
 class AuthenticationContext(BaseModel):
 
     session: AuthSession
-    user: UserOutputModel
+    user: UserDBModel | UserOutputModel
+
+    def get_user_dict(self) -> dict:
+        return self.user.model_dump(exclude=USER_EXLUCUDE_FIELDS)

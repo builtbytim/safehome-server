@@ -73,11 +73,11 @@ async def __get_auth_context(bg_tasks, token):
     bg_tasks.add_task(make_update, session.uid,
                       session.last_used, session.usage_count)
 
-    bare_user = UserDBModel(**user).model_dump(exclude=USER_EXLUCUDE_FIELDS)
+    _user_model = UserDBModel(**user)
 
     return AuthenticationContext(
         session=session,
-        user=UserOutputModel(**bare_user)
+        user=_user_model
     )
 
 
