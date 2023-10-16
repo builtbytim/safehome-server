@@ -34,6 +34,14 @@ class Wallet(BaseModel):
         default_factory=get_utc_timestamp, alias="createdAt")
     updated_at:  float = Field(
         default_factory=get_utc_timestamp, alias="updatedAt")
+    total_amount_deposited: float = Field(
+        default=0.0, alias="totalAmountDeposited")
+    total_amount_withdrawn: float = Field(
+        default=0.0, alias="totalAmountWithdrawn")
+    total_amount_invested: float = Field(
+        default=0.0, alias="totalAmountInvested")
+    total_amount_invested_withdrawn: float = Field(
+        default=0.0, alias="totalAmountInvestedWithdrawn")
 
     model_config = SettingsConfigDict(populate_by_name=True)
 

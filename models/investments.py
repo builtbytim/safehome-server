@@ -25,6 +25,15 @@ class AssetProps(BaseModel):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
+class UserInvestmentStats(BaseModel):
+    balance: float
+    investment_count: int = Field(alias="investmentCount")
+    total_invested: float = Field(alias="totalInvested")
+    total_withdrawn: float = Field(alias="totalWithdrawn")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class InvestibleAssetBase(BaseModel):
     asset_name: str = Field(min_length=3, max_length=64, alias="assetName")
     location: str | None = Field(min_length=3, max_length=256, default=None)

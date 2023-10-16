@@ -83,6 +83,8 @@ async def complete_payment(req:  Request, ):
 
         # give wallet
 
+        the_wallet: Wallet = await find_record(Wallet, Collections.wallets, "uid", transaction.initiator, raise_404=False)
+
         if transaction.type == TransactionType.investment:
 
             the_investment: Investment = await find_record(Investment, Collections.investments, "payment_reference", transaction.reference, raise_404=False)
@@ -93,6 +95,8 @@ async def complete_payment(req:  Request, ):
                 return failed_redirect
 
             the_investment.is_active = True
+
+            the_wallet.total_amount_invested += transaction.amount
 
             await update_record(Investment, the_investment.model_dump(), Collections.investments, "uid", refresh_from_db=True)
 
@@ -106,6 +110,7 @@ async def complete_payment(req:  Request, ):
                 return failed_redirect
 
             the_wallet.balance += transaction.amount
+            the_wallet.total_amount_deposited += transaction.amount
             the_wallet.last_transaction_at = get_utc_timestamp()
 
             await update_record(Wallet, the_wallet.model_dump(), Collections.wallets, "uid", refresh_from_db=True)

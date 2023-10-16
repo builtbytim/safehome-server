@@ -208,3 +208,25 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
                 **asset).model_dump(by_alias=True)
 
     return result
+
+
+@router.get("/stats", status_code=200, response_model=UserInvestmentStats)
+async def get_user_investment_stats(auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
+
+    filters = {
+        "investor_uid": auth_context.user.uid,
+        "completed":  False,
+    }
+
+    investments = await _db[Collections.investments].find(filters).to_list(length=None)
+
+    investment_count = len(investments)
+
+    current_amount_invested = round(sum([x["amount"] for x in investments]), 2)
+
+    return UserInvestmentStats(
+        balance=current_amount_invested,
+        investment_count=investment_count,
+        total_invested=round(user_wallet.total_amount_invested, 2),
+        total_withdrawn=round(user_wallet.total_amount_invested_withdrawn, 2),
+    )
