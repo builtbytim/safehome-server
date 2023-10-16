@@ -14,7 +14,7 @@ from libs.utils.pagination import Paginator, PaginatedResult
 from libs.huey_tasks.tasks import task_send_mail
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
-
+import random
 
 logger = Logger(f"{__package__}.{__name__}")
 
@@ -111,7 +111,7 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
     )
 
     investment = Investment(
-        asset_uid=asset.uid, units=body.units, investor_uid=auth_context.user.uid, payment_reference=transaction.reference, roi=asset.props.roi, investment_exit=asset.props.investment_exit, amount=amount, investment_exit_date=get_utc_timestamp())
+        asset_uid=asset.uid,  units=body.units, investor_uid=auth_context.user.uid, payment_reference=transaction.reference, roi=asset.props.roi, investment_exit=asset.props.investment_exit, amount=amount, investment_exit_date=get_utc_timestamp())
 
     # if the funding source is the wallet then we need to check if the user has enough funds in the wallet
 
@@ -131,7 +131,15 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 
         # update the asset available units
         asset.available_units -= body.units
-        asset.investor_count += 1
+
+        if asset.available_units == 0:
+            asset.sold_out = True
+
+        # update the asset investors
+        if not auth_context.user.uid in asset.investors:
+            asset.investors.append(auth_context.user.uid)
+            # update the asset investor count
+            asset.investor_count += 1
 
         await update_record(InvestibleAsset, asset.model_dump(), Collections.investible_assets, "uid")
 
@@ -163,7 +171,7 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 
 
 @router.get("", status_code=200, response_model=PaginatedResult)
-async def get_investments(page: int = 1, limit: int = 10, include_asset: bool = Query(alias="includeAsset", default=True), auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     filters = {
         "investor_uid": auth_context.user.uid,
@@ -178,14 +186,18 @@ async def get_investments(page: int = 1, limit: int = 10, include_asset: bool = 
         per_page=limit,
     )
 
-    result = await paginator.get_paginated_result(page, Investment)
+    result = await paginator.get_paginated_result(page, InvestmentWithAsset)
+
+    # get the asset for each investment and set it to the asset info propert of each item in the result
 
     if include_asset:
         for item in result.items:
+            asset = await _db[Collections.investible_assets].find_one({"uid": item.asset_uid})
+            item.asset_info = InvestibleAsset(**asset)
 
-            temp = await find_record(InvestibleAsset, Collections.investible_assets, "uid", item['assetUid'], raise_404=False)
-
-            if temp:
-                item["asset"] = temp.model_dump(by_alias=True)
+        # filter out the items that have no matching owner club in the query
+        if owners_club != OwnersClubs.all:
+            result.items = [
+                x for x in result.items if x.asset_info.owner_club == owners_club.value]
 
     return result
