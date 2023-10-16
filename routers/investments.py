@@ -173,6 +173,8 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 @router.get("", status_code=200, response_model=PaginatedResult)
 async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
+    raise ValueError("This endpoint is not yet implemented")
+
     filters = {
         "investor_uid": auth_context.user.uid,
     }
@@ -192,12 +194,16 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
 
     if include_asset:
         for item in result.items:
-            asset = await _db[Collections.investible_assets].find_one({"uid": item.asset_uid})
-            item.asset_info = InvestibleAsset(**asset)
+
+            asset = await _db[Collections.investible_assets].find_one({"uid": item['assetUid']})
+            item['assetInfo'] = InvestibleAsset(
+                **asset).model_dump(by_alias=True)
 
         # filter out the items that have no matching owner club in the query
         if owners_club != OwnersClubs.all:
             result.items = [
-                x for x in result.items if x.asset_info.owner_club == owners_club.value]
+                x for x in result.items if x['assetInfo']['ownerClub'] == owners_club.value]
+
+        result.entries = len(result.items)
 
     return result
