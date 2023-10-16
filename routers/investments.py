@@ -173,8 +173,6 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 @router.get("", status_code=200, response_model=PaginatedResult)
 async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
-    raise ValueError("This endpoint is not yet implemented")
-
     filters = {
         "investor_uid": auth_context.user.uid,
     }
