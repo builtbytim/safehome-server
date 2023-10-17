@@ -8,7 +8,8 @@ from libs.utils.pagination import Paginator, PaginatedResult
 from models.payments import *
 from models.wallets import *
 from libs.utils.pure_functions import *
-from libs.huey_tasks.tasks import task_send_mail
+from libs.huey_tasks.tasks import task_send_mail, task_create_notification
+from models.notifications import NotificationTypes
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
@@ -306,6 +307,11 @@ async def complete_topup_wallet(req:  Request, ):
         await update_record(Wallet, wallet.model_dump(), Collections.wallets, "uid", refresh_from_db=True)
 
         await update_record(Transaction, transaction.model_dump(), Collections.transactions, "reference", refresh_from_db=True)
+
+        # send a notification
+
+        task_create_notification(
+            transaction.initiator, "Added funds successfully", f"Your funding of {transaction.amount} was successful", NotificationTypes.wallet)
 
         return success_redirect
 

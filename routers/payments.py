@@ -121,7 +121,7 @@ async def complete_payment(req:  Request, ):
             await update_record(Wallet, the_wallet.model_dump(), Collections.wallets, "uid", refresh_from_db=True)
 
             task_create_notification(
-                transaction.initiator, "Deposit Successful", f"Your deposit of {transaction.amount} was successful", NotificationTypes.wallet)
+                transaction.initiator, "Added funds successfully", f"Your funding of {transaction.amount} was successful", NotificationTypes.wallet)
 
             user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", transaction.initiator, raise_404=False)
 
