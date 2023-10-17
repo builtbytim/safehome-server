@@ -43,7 +43,6 @@ async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Qu
 
     filters = {
         "user_id": auth_context.user.uid,
-        "read": False
     }
 
     if read:
@@ -53,13 +52,17 @@ async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Qu
                           "created_at", top_down_sort=True, filters=filters, per_page=limit)
 
     res = await paginator.get_paginated_result(page, Notification)
-    print(res)
     return res
 
 
 @router.get("/mark-all-as-read", status_code=200)
 async def mark_all_user_notifications_as_read(auth_context: AuthenticationContext = Depends(get_auth_context)):
-    await _db[Collections.notifications].update_many({"user_id": auth_context.user.uid}, {"$set": {"read": True, "read_at": get_utc_timestamp()}})
+    await _db[Collections.notifications].update_many({"user_id": auth_context.user.uid, "read": False}, {"$set": {"read": True, "read_at": get_utc_timestamp()}})
+
+
+@router.get("/clear-all", status_code=200)
+async def clear_all_user_notifications(auth_context: AuthenticationContext = Depends(get_auth_context)):
+    await _db[Collections.notifications].delete_many({"user_id": auth_context.user.uid})
 
 
 @router.get("/{uid}/mark-as-read", status_code=200)
