@@ -7,6 +7,7 @@ from libs.db import Collections
 from models.wallets import Wallet
 from huey.exceptions import CancelExecution
 from huey import crontab
+from models.notifications import Notification, NotificationTypes
 from .utils import exp_backoff_task
 from .config import huey
 from libs.emails.send_email import dispatch_email
@@ -64,6 +65,28 @@ def task_post_user_registration(user_id:  str):
         wallet = Wallet(user_id=user_id)
 
         db[Collections.wallets].insert_one(wallet.model_dump())
+
+
+# Task to create a notification for a user
+
+@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+def task_create_notification(user_id:  str, title:  str, body:  str, notification_type:  NotificationTypes, ):
+
+    logger.info(
+        f"Creating notification of type {notification_type} for user {user_id}")
+
+    user = db[Collections.users].find_one({"uid": user_id})
+
+    if not user:
+        logger.info(f"User {user_id} does not exist")
+        raise CancelExecution(retry=False)
+
+    # Create the notification
+
+    notification = Notification(
+        user_id=user_id, notification_type=notification_type, title=title, body=body)
+
+    db[Collections.notifications].insert_one(notification.model_dump())
 
 
 # Task to send an email

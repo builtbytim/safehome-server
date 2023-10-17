@@ -3,6 +3,19 @@ from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 from pydantic_settings import SettingsConfigDict
 from libs.utils.pure_functions import *
+from enum import Enum
+
+
+class NotificationTypes(str, Enum):
+    system = "system"
+    transaction = "transaction"
+    investment = "investment"
+    wallet = "wallet"
+    kyc = "kyc"
+    account = "account"
+    security = "security"
+    support = "support"
+    referral = "referral"
 
 
 class NotificationPreferencesInput(BaseModel):
@@ -30,6 +43,7 @@ class NotificationInput(BaseModel):
 class Notification(BaseModel):
     uid: str = Field(alias="uid", default_factory=get_uuid4)
     user_id: str = Field(min_length=8, alias="userId")
+    notification_type: NotificationTypes = Field(alias="notificationType")
     title: str
     body: str
     created_at: float = Field(
@@ -45,11 +59,9 @@ class Notification(BaseModel):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
-
 class UserNotificationStats(BaseModel):
     unread_count: int = Field(alias="unreadCount")
     read_count: int = Field(alias="readCount")
     total_count: int = Field(alias="totalCount")
 
     model_config = SettingsConfigDict(populate_by_name=True)
-    
