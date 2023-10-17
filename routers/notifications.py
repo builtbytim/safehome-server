@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
 from libs.config.settings import get_settings
 from models.notifications import *
 from libs.db import _db, Collections
 from libs.utils.pure_functions import *
 from libs.deps.users import AuthenticationContext, get_auth_context
 from libs.utils.api_helpers import update_record, find_record
+from libs.utils.pagination import Paginator, PaginatedResult
 
 
 settings = get_settings()
@@ -13,6 +14,85 @@ settings = get_settings()
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
 }, tags=["Notfications"])
+
+
+@router.post("", status_code=200, response_model=Notification)
+async def create_user_notification(body: NotificationInput, auth_context: AuthenticationContext = Depends(get_auth_context)):
+    notification = Notification(
+        **body.model_dump(), user_id=auth_context.user.uid)
+
+    await _db[Collections.notifications].insert_one(notification.model_dump())
+
+    return notification
+
+
+@router.get("/stats", status_code=200, response_model=UserNotificationStats)
+async def get_user_notifications_stats(auth_context: AuthenticationContext = Depends(get_auth_context)):
+
+    unread_count = await _db[Collections.notifications].count_documents({"user_id": auth_context.user.uid, "read": False})
+
+    read_count = await _db[Collections.notifications].count_documents({"user_id": auth_context.user.uid, "read": True})
+
+    total_count = unread_count + read_count
+
+    return UserNotificationStats(unread_count=unread_count, read_count=read_count, total_count=total_count)
+
+
+@router.get("", status_code=200, response_model=PaginatedResult)
+async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context)):
+
+    filters = {
+        "user_id": auth_context.user.uid,
+        "read": False
+    }
+
+    if read:
+        filters["read"] = read
+
+    paginator = Paginator(Collections.notifications,
+                          "created_at", filters=filters, per_page=limit)
+
+    return await paginator.get_paginated_result(page, Notification)
+
+
+@router.get("/mark-all-as-read", status_code=200)
+async def mark_all_user_notifications_as_read(auth_context: AuthenticationContext = Depends(get_auth_context)):
+    await _db[Collections.notifications].update_many({"user_id": auth_context.user.uid}, {"$set": {"read": True, "read_at": get_utc_timestamp()}})
+
+
+@router.get("/{uid}", status_code=200, response_model=Notification)
+async def get_user_notification(uid: str, auth_context: AuthenticationContext = Depends(get_auth_context)):
+    n = await find_record(Notification, uid, Collections.notifications)
+
+    if n.user_id != auth_context.user.uid:
+        raise HTTPException(
+            status_code=403, detail="You are not authorized to perform this action")
+
+    return n
+
+
+@router.get("/{uid}/mark-as-read", status_code=200)
+async def mark_user_notification_as_read(uid: str, auth_context: AuthenticationContext = Depends(get_auth_context)):
+    notification = await find_record(Notification, uid, Collections.notifications)
+
+    if notification.read:
+        return
+
+    if notification.user_id != auth_context.user.uid:
+        raise HTTPException(
+            status_code=403, detail="You are not authorized to perform this action")
+
+    notification.read = True
+
+    notification.read_at = get_utc_timestamp()
+
+    notification.read_by = auth_context.user.uid
+
+    notification.read_by_name = auth_context.get_full_name()
+
+    notification.read_by_avatar_url = auth_context.user.avatar_url
+
+    return await update_record(Notification, notification.model_dump(), Collections.notifications, "uid")
 
 
 @router.get("/preferences", status_code=200, response_model=NotificationPreferences)

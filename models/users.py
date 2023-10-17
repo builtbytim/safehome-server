@@ -536,3 +536,6 @@ class AuthenticationContext(BaseModel):
 
     def get_user_dict(self) -> dict:
         return self.user.model_dump(exclude=USER_EXLUCUDE_FIELDS)
+
+    def get_full_name(self) -> str:
+        return f"{self.user.first_name} {self.user.last_name}"
