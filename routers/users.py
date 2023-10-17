@@ -5,7 +5,8 @@ from libs.db import _db, Collections
 from libs.utils.pure_functions import *
 from libs.utils.security import scrypt_hash
 from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
-from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification, task_post_user_registration
+from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification, task_post_user_registration, task_create_notification
+from models.notifications import NotificationTypes
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
 from libs.deps.users import get_auth_context, get_auth_code
 from fastapi.security import OAuth2PasswordRequestForm
@@ -264,6 +265,9 @@ async def change_password(body:  PasswordChangeInput, auth_context:  Authenticat
 
     await _db[Collections.authsessions].update_many({"user_id": user.uid}, {"$set": {"is_valid": False}})
 
+    task_create_notification(
+        user.uid, "Password Changed", f"You recently changed your password", NotificationTypes.security)
+
     # send email
 
     task_send_mail(
@@ -390,9 +394,6 @@ async def get_next_of_kin(auth_context:  AuthenticationContext = Depends(get_aut
 
     next_of_kin = await _db[Collections.next_of_kins].find_one({"user_id": user.uid})
 
-    if next_of_kin is None:
-        return None
-
     return next_of_kin
 
 
@@ -408,9 +409,17 @@ async def set_next_of_kin(body:  NextOfKinInput, auth_context:  AuthenticationCo
 
     if not existing_next_of_kin:
         await _db[Collections.next_of_kins].insert_one(next_of_kin.model_dump())
+        # send a notification
+        task_create_notification(
+            user.uid, "Next of Kin Added", f"You have added a next of kin", NotificationTypes.account)
         return
 
     if body.replace:
+        # send a notification
+
+        task_create_notification(
+            user.uid, "Next of Kin Updated", f"You have updated your next of kin", NotificationTypes.account)
+
         await _db[Collections.next_of_kins].update_one(
             {"user_id": user.uid}, {"$set": next_of_kin.model_dump()})
         return
@@ -426,9 +435,19 @@ async def set_security_questions(body:  UserSecurityQuestionsInput, auth_context
         body.answer1.encode()).hex(), answer2=encrypt(body.answer2.encode()).hex())
 
     if body.replace:
+        # send a notification
+
+        task_create_notification(
+            user.uid, "Security Questions Updated", f"You have updated your security questions", NotificationTypes.account)
+
         user.security_questions = input_data
 
     elif user.security_questions is None:
+        # send a notification
+
+        task_create_notification(
+            user.uid, "Security Questions Added", f"You have added security questions", NotificationTypes.account)
+
         user.security_questions = input_data
 
     else:

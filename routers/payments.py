@@ -6,13 +6,15 @@ from libs.db import _db, Collections
 from libs.utils.api_helpers import find_record, update_record
 from models.payments import *
 from models.investments import Investment
+from models.notifications import NotificationTypes
 from models.wallets import Wallet
 from libs.utils.pure_functions import *
-from libs.huey_tasks.tasks import task_send_mail
+from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
 from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction
+
 
 logger = Logger(f"{__package__}.{__name__}")
 
@@ -100,6 +102,9 @@ async def complete_payment(req:  Request, ):
 
             await update_record(Investment, the_investment.model_dump(), Collections.investments, "uid", refresh_from_db=True)
 
+            task_create_notification(
+                the_investment.investor_uid, "Investment Successful", f"Your investment in {the_investment.asset_name} was successful", NotificationTypes.investment)
+
         else:
 
             the_wallet: Wallet = await find_record(Wallet, Collections.wallets, "uid", transaction.initiator, raise_404=False)
@@ -114,6 +119,9 @@ async def complete_payment(req:  Request, ):
             the_wallet.last_transaction_at = get_utc_timestamp()
 
             await update_record(Wallet, the_wallet.model_dump(), Collections.wallets, "uid", refresh_from_db=True)
+
+            task_create_notification(
+                transaction.initiator, "Deposit Successful", f"Your deposit of {transaction.amount} was successful", NotificationTypes.wallet)
 
             user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", transaction.initiator, raise_404=False)
 
