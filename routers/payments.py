@@ -102,8 +102,18 @@ async def complete_payment(req:  Request, ):
 
             await update_record(Investment, the_investment.model_dump(), Collections.investments, "uid", refresh_from_db=True)
 
+            # fetch the asset for the investment
+
+            asset = _db[Collections.investible_assets].find_one(
+                {"uid": the_investment.asset_uid})
+
+            if not asset:
+                logger.error(
+                    f"Unable to find asset with uid {the_investment.asset_uid}")
+                return failed_redirect
+
             task_create_notification(
-                the_investment.investor_uid, "Investment Successful", f"Your investment in {the_investment.asset_name} was successful", NotificationTypes.investment)
+                the_investment.investor_uid, "Investment Successful", f"Your investment in {asset['asset_name']} was successful", NotificationTypes.investment)
 
         else:
 

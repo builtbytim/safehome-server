@@ -11,7 +11,8 @@ from models.investments import *
 from models.wallets import Wallet
 from libs.utils.pure_functions import *
 from libs.utils.pagination import Paginator, PaginatedResult
-from libs.huey_tasks.tasks import task_send_mail
+from libs.huey_tasks.tasks import task_send_mail, task_create_notification
+from models.notifications import NotificationTypes
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
 import random
@@ -145,6 +146,9 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 
         # update the investment
         investment.is_active = True
+
+        task_create_notification(
+            investment.investor_uid, "Investment Successful", f"Your investment in {asset.asset_name} was successful", NotificationTypes.investment)
 
         await _db[Collections.investments].insert_one(investment.model_dump())
         await _db[Collections.transactions].insert_one(transaction.model_dump())

@@ -50,25 +50,16 @@ async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Qu
         filters["read"] = read
 
     paginator = Paginator(Collections.notifications,
-                          "created_at", filters=filters, per_page=limit)
+                          "created_at", top_down_sort=True, filters=filters, per_page=limit)
 
-    return await paginator.get_paginated_result(page, Notification)
+    res = await paginator.get_paginated_result(page, Notification)
+    print(res)
+    return res
 
 
 @router.get("/mark-all-as-read", status_code=200)
 async def mark_all_user_notifications_as_read(auth_context: AuthenticationContext = Depends(get_auth_context)):
     await _db[Collections.notifications].update_many({"user_id": auth_context.user.uid}, {"$set": {"read": True, "read_at": get_utc_timestamp()}})
-
-
-@router.get("/{uid}", status_code=200, response_model=Notification)
-async def get_user_notification(uid: str, auth_context: AuthenticationContext = Depends(get_auth_context)):
-    n = await find_record(Notification, uid, Collections.notifications)
-
-    if n.user_id != auth_context.user.uid:
-        raise HTTPException(
-            status_code=403, detail="You are not authorized to perform this action")
-
-    return n
 
 
 @router.get("/{uid}/mark-as-read", status_code=200)
@@ -147,3 +138,14 @@ async def set_user_notifications_preferences(body:  NotificationPreferencesInput
     await _db[Collections.notification_preferences].insert_one(notification_preferences.model_dump())
 
     return notification_preferences
+
+
+@router.get("/{uid}", status_code=200, response_model=Notification)
+async def get_user_notification(uid: str, auth_context: AuthenticationContext = Depends(get_auth_context)):
+    n = await find_record(Notification,  Collections.notifications, "uid", uid, raise_404=True)
+
+    if n.user_id != auth_context.user.uid:
+        raise HTTPException(
+            status_code=403, detail="You are not authorized to perform this action")
+
+    return n

@@ -51,10 +51,12 @@ class Notification(BaseModel):
     updated_at: float = Field(
         default_factory=get_utc_timestamp, alias="updatedAt")
     read: bool = False
-    read_at: Optional[float] = Field(alias="readAt")
-    read_by: Optional[str] = Field(alias="readBy")
-    read_by_name: Optional[str] = Field(alias="readByName")
-    read_by_avatar_url: Optional[str] = Field(alias="readByAvatarUrl")
+    read_at: float | None = Field(alias="readAt", default=None)
+    read_by: str | None = Field(alias="readBy", default=None)
+    read_by_name: str | None = Field(
+        alias="readByName", default=None)
+    read_by_avatar_url: str | None = Field(
+        alias="readByAvatarUrl", default=None)
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
