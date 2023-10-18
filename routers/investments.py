@@ -177,11 +177,14 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 @router.get("", status_code=200, response_model=PaginatedResult)
 async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), completed: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
-    filters = {
+    root_filter = {
         "investor_uid": auth_context.user.uid,
-        "completed":  completed,
-
     }
+
+    filters = {}
+
+    if completed:
+        filters["completed"] = True
 
     async def filter_for_items_with_correct_owner_club(item,):
 
@@ -191,6 +194,7 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
 
     paginator = Paginator(
         col_name=Collections.investments,
+        root_filter=root_filter,
         filters=filters,
         sort_field="created_at",
         top_down_sort=True,

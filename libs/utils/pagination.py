@@ -25,7 +25,7 @@ class PaginatedResult(BaseModel):
 
 class Paginator:
 
-    def __init__(self,   col_name:  Collections,  sort_field: str, top_down_sort: bool = True, per_page: int = 2,  filters: dict = {}, include_crumbs=True, filter_func=None) -> None:
+    def __init__(self,   col_name:  Collections,  sort_field: str, top_down_sort: bool = True, per_page: int = 2, filters: dict = {}, include_crumbs=True, filter_func=None,  root_filter: dict = {}) -> None:
         self.per_page = per_page
         self.sort_field = sort_field
         self.direction = -1 if top_down_sort else 1
@@ -37,6 +37,7 @@ class Paginator:
         self.init = False
         self.col_name = col_name
         self.filters = filters
+        self.root_filter = root_filter
         self.query = None
         self.num_pages = None
         self.filter_func = filter_func
@@ -63,15 +64,10 @@ class Paginator:
             return
 
         self.init = True
-        self.unfiltered_entries = await _db[self.col_name].count_documents({})
 
-        n = None
+        self.unfiltered_entries = await _db[self.col_name].count_documents(self.root_filter)
 
-        if self.filter_func:
-            n = await _db[self.col_name].count_documents(self.filters)
-
-        else:
-            n = await _db[self.col_name].count_documents(self.filters)
+        n = await _db[self.col_name].count_documents(self.filters)
 
         self.entries = n
 
