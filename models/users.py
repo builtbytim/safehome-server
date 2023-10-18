@@ -425,6 +425,8 @@ class UserOutputModel(UserBaseModel):
     is_active: bool = Field(default=False, alias="isActive")
     created_at: float = Field(default_factory=time, alias="createdAt")
     last_login: Union[float, None] = Field(alias="lastLogin", default=None)
+    has_paid_membership_fee: bool = Field(
+        default=False, alias="hasPaidMembershipFee")
     true_last_login: Union[float, None] = Field(
         alias="trueLastLogin", default=None)
     updated_at: float = Field(default_factory=time, alias="updatedAt")
