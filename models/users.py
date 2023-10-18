@@ -326,7 +326,7 @@ class UserKYCInfo(BaseModel):
     document_type: KYCDocumentType = Field(alias="documentType")
     created_at:  float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
-    BVN:  str = Field(min_length=11, max_length=11, alias="BVN")
+    BVN:  str = Field(min_length=11,  alias="BVN")
     IDNumber: str = Field(min_length=10, alias="IDNumber")
     approved:  bool = Field(default=False)
     flagged:  bool = Field(default=False)
