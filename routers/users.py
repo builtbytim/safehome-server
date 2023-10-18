@@ -458,34 +458,28 @@ async def set_security_questions(body:  UserSecurityQuestionsInput, auth_context
 
 
 @router.post("/kyc", status_code=200)
-async def add_kyc_info(body:  KYCVerificationInput,  auth_code: AuthCode = Depends(get_auth_code)):
+async def add_kyc_info(body:  KYCVerificationInput,  auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
-    v1 = auth_code.verify_action(ActionIdentifiers.ADD_KYC_INFO)
-    v2 = auth_code.verify_action(ActionIdentifiers.AUTHENTICATION)
-
-    if not (v1 or v2):
-        raise HTTPException(400, "Invalid Auth Code ")
-
-    user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", auth_code.user_id, raise_404=True)
+    user: UserDBModel = auth_context.user
 
     if user.kyc_status == KYCStatus.APPROVED:
         raise HTTPException(400, "Your KYC is already approved")
 
     if user.kyc_status == KYCStatus.PENDING:
         raise HTTPException(
-            400, "You have an existing KYC request pending, please contact support")
+            400, "You already have an existing KYC request pending.")
 
     kyc_info = UserKYCInfo(
         residential_address=body.residential_address,
         state=body.state,
         document_type=body.document_type,
+        BVN=body.BVN,
+        IDNumber=body.IDNumber
     )
 
-    if kyc_info.document_type == KYCDocumentType.NIN:
-        kyc_info.NIN = encrypt(body.NIN.encode()).hex()
+    kyc_info.IDNumber = encrypt(body.IDNumber.encode()).hex()
 
-    elif kyc_info.document_type == KYCDocumentType.BVN:
-        kyc_info.BVN = encrypt(body.BVN.encode()).hex()
+    kyc_info.BVN = encrypt(body.BVN.encode()).hex()
 
     user.kyc_info = kyc_info
 

@@ -83,6 +83,9 @@ class UserRoles(str, Enum):
 class KYCDocumentType(str, Enum):
     BVN = "BVN"
     NIN = "NIN"
+    PASSPORT = "PASSPORT"
+    NATIONAL_ID = "NATIONAL_ID"
+    DRIVERS_LICENSE = "DRIVERS_LICENSE"
 
 
 class KYCStatus(str, Enum):
@@ -244,42 +247,36 @@ class KYCVerificationInput(BaseModel):
 
     state: States
     document_type: KYCDocumentType = Field(alias="documentType")
-    BVN:  str | None = Field(default=None, min_length=11,
-                             max_length=11, alias="BVN")
-    NIN: str | None = Field(default=None, min_length=11,
-                            max_length=11, alias="NIN")
+    IDNumber:  str = Field(min_length=10,
+                           alias="IDNumber")
+    BVN: str = Field(min_length=11,
+                     max_length=11, alias="BVN")
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
     @validator('BVN', pre=False, always=True)
-    def validate_bvn(cls, v, values):
+    def validate_bvn(cls, v):
         value = v
-
-        if value is None and values.get("documentType") == KYCDocumentType.BVN:
-            raise ValueError("BVN is required")
-
-        if value is None:
-            return value
 
         if not value.isdigit():
             raise ValueError("BVN must be digits")
 
         return value
 
-    @validator('NIN', pre=False, always=True)
-    def validate_nin(cls, v, values):
-        value = v
+    # @validator('NIN', pre=False, always=True)
+    # def validate_nin(cls, v, values):
+    #     value = v
 
-        if value is None and values.get("documentType") == KYCDocumentType.NIN:
-            raise ValueError("NIN is required")
+    #     if value is None and values.get("documentType") == KYCDocumentType.NIN:
+    #         raise ValueError("NIN is required")
 
-        if value is None:
-            return value
+    #     if value is None:
+    #         return value
 
-        if not value.isdigit():
-            raise ValueError("NIN must be digits")
+    #     if not value.isdigit():
+    #         raise ValueError("NIN must be digits")
 
-        return value
+    #     return value
 
 
 class NextOfKinInput(BaseModel):
@@ -329,8 +326,8 @@ class UserKYCInfo(BaseModel):
     document_type: KYCDocumentType = Field(alias="documentType")
     created_at:  float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
-    BVN:  str | None = None
-    NIN: str | None = None
+    BVN:  str = Field(min_length=11, max_length=11, alias="BVN")
+    IDNumber: str = Field(min_length=10, alias="IDNumber")
     approved:  bool = Field(default=False)
     flagged:  bool = Field(default=False)
 
