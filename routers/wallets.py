@@ -22,11 +22,11 @@ settings = get_settings()
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Wallets"], dependencies=[Depends(only_paid_users)])
+}, tags=["Wallets"])
 
 
 @router.post("/banks", status_code=201, response_model=BankAccount)
-async def add_bank_account(body:  BankAccountInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def add_bank_account(body:  BankAccountInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     account_result = _resolve_bank_account(body.bank_code, body.account_number)
     banks_result = _get_supported_banks()
@@ -54,7 +54,7 @@ async def add_bank_account(body:  BankAccountInput, auth_context: Authentication
 
 
 @router.get("/banks", status_code=201, response_model=list[BankAccount])
-async def get_bank_accounts(auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def get_bank_accounts(auth_context: AuthenticationContext = Depends(get_auth_context),  paid_membership_fee: bool = Depends(only_paid_users), wallet:  Wallet = Depends(get_user_wallet)):
 
     bank_accounts = await _db[Collections.bank_accounts].find({"wallet": wallet.uid}).to_list(100)
 
@@ -62,12 +62,12 @@ async def get_bank_accounts(auth_context: AuthenticationContext = Depends(get_au
 
 
 @router.get("/banks/supported", status_code=200, response_model=list[SupportedBank])
-async def get_supported_banks(auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_supported_banks(auth_context: AuthenticationContext = Depends(get_auth_context),  paid_membership_fee: bool = Depends(only_paid_users),):
     return _get_supported_banks()
 
 
 @router.post("/banks/resolve", status_code=200, response_model=ResolveBankAccountOutput)
-async def resolve_bank_account(body: BankAccountInput,  auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def resolve_bank_account(body: BankAccountInput,  auth_context: AuthenticationContext = Depends(get_auth_context),  paid_membership_fee: bool = Depends(only_paid_users)):
 
     result = _resolve_bank_account(body.bank_code, body.account_number)
 
@@ -79,7 +79,7 @@ async def resolve_bank_account(body: BankAccountInput,  auth_context: Authentica
 
 
 @router.delete("/banks/{bank_id}", status_code=200)
-async def delete_bank_account(bank_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def delete_bank_account(bank_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users)):
 
     bank_account: BankAccount = await find_record(BankAccount, Collections.bank_accounts, "uid", bank_id, raise_404=False)
 
@@ -111,7 +111,7 @@ async def delete_bank_account(bank_id: str, auth_context: AuthenticationContext 
 
 
 @router.get("", status_code=200, response_model=Wallet)
-async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
@@ -123,7 +123,7 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
 
 
 @router.get("/transactions", status_code=200, response_model=PaginatedResult)
-async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int = Query(ge=1, default=1), start_date: float | None = Query(alias="startDate", default=None), end_date: float | None = Query(alias="endDate", default=None), tx_type: str = Query(alias="type", default="all"), from_last: FromLastNTime | None = Query(alias="fromLast", default=None),   auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int = Query(ge=1, default=1), start_date: float | None = Query(alias="startDate", default=None), end_date: float | None = Query(alias="endDate", default=None), tx_type: str = Query(alias="type", default="all"), from_last: FromLastNTime | None = Query(alias="fromLast", default=None),  paid_membership_fee: bool = Depends(only_paid_users),  auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
@@ -182,7 +182,7 @@ async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int
 
 # get a single tx that belomgs to a user
 @router.get("/transactions/{tx_ref}", status_code=200, response_model=Transaction)
-async def get_wallet_transaction(tx_ref: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def get_wallet_transaction(tx_ref: str, paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
 
@@ -206,7 +206,7 @@ async def get_wallet_transaction(tx_ref: str, auth_context: AuthenticationContex
 
 
 @router.post("/withdraw", status_code=200)
-async def withdraw_from_wallet(body:  WithdrawalInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def withdraw_from_wallet(body:  WithdrawalInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
@@ -270,7 +270,7 @@ async def withdraw_from_wallet(body:  WithdrawalInput, auth_context: Authenticat
 
 
 @router.post("/top-up", status_code=200, response_model=TopupOutput)
-async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def topup_wallet(body:  TopupInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
