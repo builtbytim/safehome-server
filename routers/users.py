@@ -19,7 +19,7 @@ settings = get_settings()
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Users"], dependencies=[Depends(only_paid_users)])
+}, tags=["Users"], )
 
 
 @router.post("",  response_model=UserDBModel, response_model_by_alias=True, response_model_exclude=USER_EXLUCUDE_FIELDS)
@@ -64,7 +64,7 @@ async def user_sign_up(response:  Response, body:  UserInputModel):
 
 
 @router.put("",  response_model=UserDBModel, response_model_by_alias=True, response_model_exclude=USER_EXLUCUDE_FIELDS)
-async def update_user(body:  UserUpdateModel, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def update_user(body:  UserUpdateModel, paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
     user = auth_context.user
 
@@ -171,18 +171,6 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(
             400, "Account is  inactive, please contact support.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_EMAIL", "X-AUTH-CODE": email_auth_code.code})
 
-    # if user.kyc_status is None:
-    #     raise HTTPException(
-    #         400, "You must submit your KYC before you can sign in.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC", "X-AUTH-CODE": auth_code.code})
-
-    # if not user.kyc_status == KYCStatus.APPROVED and not (user.kyc_status == KYCStatus.PENDING):
-    #     raise HTTPException(
-    #         400, "Your KYC was rejected, please reapply.",  headers={"WWW-Authenticate": "Bearer", "X-ACTION": "VERIFY_KYC", "X-AUTH-CODE": auth_code.code})
-
-    # if user.kyc_status == KYCStatus.PENDING:
-    #     raise HTTPException(
-    #         400, "Your KYC is still pending, try again later.",  headers={"WWW-Authenticate": "Bearer",  "X-AUTH-CODE": auth_code.code})
-
     is_correct_password = scrypt_verify(
         body.password, user.password_hash, user.uid)
 
@@ -227,7 +215,7 @@ async def sign_out(auth_context:  AuthenticationContext = Depends(get_auth_conte
 
 
 @router.post("/password/change", status_code=200)
-async def change_password(body:  PasswordChangeInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def change_password(body:  PasswordChangeInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
     user:  UserDBModel = find_record(
         UserDBModel, Collections.users, "uid", auth_context.user.uid, raise_404=True)
@@ -374,7 +362,7 @@ async def password_save(body:  PasswordResetSaveInput):
 
 
 @router.post("/avatar", status_code=200, )
-async def avatar_upload(avatar: UploadFile = File(...),   auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def avatar_upload(paid_membership_fee: bool = Depends(only_paid_users), avatar: UploadFile = File(...),   auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     user = auth_context.user
 
@@ -388,7 +376,7 @@ async def avatar_upload(avatar: UploadFile = File(...),   auth_context: Authenti
 
 
 @router.get("/next-of-kin", status_code=200, response_model=NextOfKinInfo | None)
-async def get_next_of_kin(auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def get_next_of_kin(paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
     user: UserDBModel = auth_context.user
 
@@ -398,7 +386,7 @@ async def get_next_of_kin(auth_context:  AuthenticationContext = Depends(get_aut
 
 
 @router.post("/next-of-kin", status_code=200)
-async def set_next_of_kin(body:  NextOfKinInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def set_next_of_kin(body:  NextOfKinInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
     user: UserDBModel = auth_context.user
 
     next_of_kin = NextOfKinInfo(**body.model_dump(), user_id=user.uid)
@@ -428,7 +416,7 @@ async def set_next_of_kin(body:  NextOfKinInput, auth_context:  AuthenticationCo
 
 
 @router.post("/security-questions", status_code=200)
-async def set_security_questions(body:  UserSecurityQuestionsInput, auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def set_security_questions(body:  UserSecurityQuestionsInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
     user: UserDBModel = auth_context.user
 
     input_data = UserSecurityQuestions(question1=body.question1, question2=body.question2, answer1=encrypt(
@@ -458,7 +446,7 @@ async def set_security_questions(body:  UserSecurityQuestionsInput, auth_context
 
 
 @router.post("/kyc", status_code=200)
-async def add_kyc_info(body:  KYCVerificationInput,  auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def add_kyc_info(body:  KYCVerificationInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
     user: UserDBModel = auth_context.user
 
@@ -487,7 +475,7 @@ async def add_kyc_info(body:  KYCVerificationInput,  auth_context:  Authenticati
 
 
 @router.post("/kyc/upload", status_code=200, )
-async def kyc_doc_upload(file: UploadFile = File(...),    auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def kyc_doc_upload(file: UploadFile = File(...),  paid_membership_fee: bool = Depends(only_paid_users),   auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
     user = auth_context.user
 

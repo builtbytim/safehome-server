@@ -32,6 +32,10 @@ router = APIRouter(responses={
 @router.post("/membership", status_code=201)
 async def initiate_membership_payment(auth_context: AuthenticationContext = Depends(get_auth_context), wallet: Wallet = Depends(get_user_wallet)):
 
+    if auth_context.user.has_paid_membership_fee:
+        raise HTTPException(
+            status_code=400, detail="You have already paid your membership fee. Reload the page manually if you think this is an error.")
+
     MEMBERSHIP_FEE = settings.membership_fee
 
     transaction = Transaction(
@@ -122,7 +126,12 @@ async def complete_payment(req:  Request, ):
 
         # give wallet
 
-        the_wallet: Wallet = await find_record(Wallet, Collections.wallets, "uid", transaction.initiator, raise_404=False)
+        the_wallet: Wallet = await find_record(Wallet, Collections.wallets, "uid", transaction.wallet, raise_404=False)
+
+        if not the_wallet:
+            logger.error(
+                f"Unable to find wallet with uid {transaction.initiator}")
+            return failed_redirect
 
         if transaction.type == TransactionType.investment:
 
