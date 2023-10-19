@@ -8,7 +8,7 @@ from libs.utils.api_helpers import update_record, find_record, _validate_email_f
 from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification, task_post_user_registration, task_create_notification
 from models.notifications import NotificationTypes
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
-from libs.deps.users import get_auth_context, get_auth_code
+from libs.deps.users import get_auth_context, get_auth_code, only_paid_users
 from fastapi.security import OAuth2PasswordRequestForm
 from libs.utils.security import encrypt
 from libs.cloudinary.uploader import upload_image
@@ -19,7 +19,7 @@ settings = get_settings()
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Users"])
+}, tags=["Users"], dependencies=[Depends(only_paid_users)])
 
 
 @router.post("",  response_model=UserDBModel, response_model_by_alias=True, response_model_exclude=USER_EXLUCUDE_FIELDS)

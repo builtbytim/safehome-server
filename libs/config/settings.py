@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     server_url: str = "http://localhost:7000/api/v1"
     log_level: str = "DEBUG"
     app_name: str = "Safehome"
+    membership_fee: float = 5000
     db_name: str = "Safehome"
     cloudinary_cloud_name: str = "cloud_name"
     cloudinary_api_key: str = "api_key"

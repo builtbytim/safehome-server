@@ -3,7 +3,7 @@ from libs.config.settings import get_settings
 from models.notifications import *
 from libs.db import _db, Collections
 from libs.utils.pure_functions import *
-from libs.deps.users import AuthenticationContext, get_auth_context
+from libs.deps.users import AuthenticationContext, get_auth_context, only_paid_users
 from libs.utils.api_helpers import update_record, find_record
 from libs.utils.pagination import Paginator, PaginatedResult
 
@@ -13,7 +13,7 @@ settings = get_settings()
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Notfications"])
+}, tags=["Notfications"], dependencies=[Depends(only_paid_users)])
 
 
 @router.post("", status_code=200, response_model=Notification)

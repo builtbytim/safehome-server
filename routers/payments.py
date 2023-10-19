@@ -13,7 +13,8 @@ from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
-from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction
+from libs.utils.flutterwave import _initiate_payment, _verify_transaction
+from libs.deps.users import get_auth_context, get_user_wallet
 
 
 logger = Logger(f"{__package__}.{__name__}")
@@ -25,6 +26,42 @@ settings = get_settings()
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
 }, tags=["Payments"])
+
+
+# one time membership payment for new users
+@router.post("/membership", status_code=201)
+async def initiate_membership_payment(auth_context: AuthenticationContext = Depends(get_auth_context), wallet: Wallet = Depends(get_user_wallet)):
+
+    MEMBERSHIP_FEE = settings.membership_fee
+
+    transaction = Transaction(
+        initiator=auth_context.user.uid,
+        wallet=wallet.uid,
+        amount=MEMBERSHIP_FEE,
+        direction=TransactionDirection.outgoing,
+        type=TransactionType.membership_fee,
+        description="Membership Fee",
+        balance_before=wallet.balance,
+        balance_after=wallet.balance,
+
+    )
+
+    result = _initiate_payment(transaction, auth_context, customizations={
+
+        "title": "SafeHome",
+        "description": "Membership Fee",
+
+    })
+
+    api_response = {
+        "redirect_url": result["link"],
+    }
+
+    # save tx to db
+
+    await _db[Collections.transactions].insert_one(transaction.model_dump())
+
+    return api_response
 
 
 @router.get("/complete", status_code=200)
@@ -114,6 +151,26 @@ async def complete_payment(req:  Request, ):
 
             task_create_notification(
                 the_investment.investor_uid, "Investment Successful", f"Your investment in {asset['asset_name']} was successful", NotificationTypes.investment)
+
+        elif transaction.type == TransactionType.membership_fee:
+
+            the_wallet.is_active = True
+
+            # set has paid on user to true
+
+            user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", transaction.initiator, raise_404=False)
+
+            if not user:
+                logger.error(
+                    f"Unable to find user with uid {transaction.initiator}")
+                return failed_redirect
+
+            user.has_paid_membership_fee = True
+
+            await update_record(UserDBModel, user.model_dump(), Collections.users, "uid", refresh_from_db=True)
+
+            task_create_notification(
+                transaction.initiator, "Membership Fee Paid", f"Your membership fee payment was successful", NotificationTypes.account)
 
         else:
 

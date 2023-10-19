@@ -23,6 +23,7 @@ class TransactionType(str, Enum):
     topup = "topup"
     withdrawal = "withdrawal"
     investment = "investment"
+    membership_fee = "membership_fee"
 
 
 class TransactionDirection(str, Enum):

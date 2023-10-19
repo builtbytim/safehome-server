@@ -29,7 +29,7 @@ class Wallet(BaseModel):
     currency: str = Field(default=settings.default_currency)
     last_transaction_at: float = Field(
         default_factory=get_utc_timestamp, alias="lastTransactionAt")
-    is_active: bool = Field(default=True, alias="isActive")
+    is_active: bool = Field(default=False, alias="isActive")
     created_at:  float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
     updated_at:  float = Field(

@@ -98,9 +98,31 @@ async def get_user_wallet(context: AuthenticationContext = Depends(get_auth_cont
     wallet = await _db[Collections.wallets].find_one({"user_id": context.user.uid})
 
     if wallet:
-        return Wallet(**wallet)
+        w = Wallet(**wallet)
+
+        # if not w.is_active:
+        #     if not context.user.has_paid_membership_fee:
+
+        #         raise HTTPException(
+        #             status_code=400, detail="Wallet is inactive, ensure you have paid your membership fee.")
+
+        #     else:
+        #         raise HTTPException(
+        #             status_code=400, detail="Wallet is inactive, contact support.")
+
+        return w
 
     return None
+
+
+async def only_paid_users(context: AuthenticationContext | None = Depends(get_auth_context_optionally)) -> UserDBModel:
+
+    if context is None:
+        return
+
+    if not context.user.has_paid_membership_fee:
+        raise HTTPException(
+            status_code=400, detail="You must pay your membership fee to perform this action.")
 
 
 async def _get_user_by_uid(uid: str) -> UserDBModel:

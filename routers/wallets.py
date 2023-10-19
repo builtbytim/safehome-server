@@ -10,9 +10,8 @@ from models.wallets import *
 from libs.utils.pure_functions import *
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from models.notifications import NotificationTypes
-from libs.deps.users import get_auth_context, get_user_wallet
+from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users
 from libs.logging import Logger
-from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
 from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction, _get_supported_banks, _resolve_bank_account, _initiate_withdrawal
 
 
@@ -23,7 +22,7 @@ settings = get_settings()
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Wallets"])
+}, tags=["Wallets"], dependencies=[Depends(only_paid_users)])
 
 
 @router.post("/banks", status_code=201, response_model=BankAccount)

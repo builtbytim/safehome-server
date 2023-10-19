@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from fastapi.responses import RedirectResponse
 from libs.config.settings import get_settings
 from models.users import AuthenticationContext
 from libs.db import _db, Collections
@@ -13,9 +12,8 @@ from libs.utils.pure_functions import *
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from models.notifications import NotificationTypes
-from libs.deps.users import get_auth_context, get_user_wallet
+from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users
 from libs.logging import Logger
-import random
 
 logger = Logger(f"{__package__}.{__name__}")
 
@@ -25,7 +23,7 @@ settings = get_settings()
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Investments"])
+}, tags=["Investments"], dependencies=[Depends(only_paid_users)])
 
 
 @router.post("/assets", status_code=200, response_model=InvestibleAsset)
