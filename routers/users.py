@@ -504,6 +504,9 @@ async def kyc_doc_upload(file: UploadFile = File(...),  paid_membership_fee: boo
 
     user.kyc_status = KYCStatus.PENDING
 
+    user.state = user.kyc_info.state
+    user.address = user.kyc_info.residential_address
+
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
     task_initiate_kyc_verification(user.uid)

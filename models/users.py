@@ -407,7 +407,7 @@ class UserOutputModel(UserBaseModel):
         default=None, alias="securityQuestions")
     address: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
-    country: Union[str, None] = Field(
+    state: Union[str, None] = Field(
         default=None,  min_length=2, max_length=35)
     avatar_url: Union[str, None] = Field(default=None, alias="avatarUrl")
     gender: Union[Genders, None] = None
@@ -434,7 +434,7 @@ class UserOutputModel(UserBaseModel):
         default_factory=get_utc_timestamp, alias="passwordResetAt")
 
     @validator('phone')
-    def validate_phone(v, values):
+    def validate_phone(v):
         value = v
 
         if value is None:

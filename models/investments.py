@@ -58,7 +58,7 @@ class InvestibleAsset(InvestibleAssetBase):
     investor_count: int = Field(ge=0, alias="investorCount")
     investors: list[str] = Field(default=[], alias="investors")
     cover_image_url: str | None = Field(default=None, alias="coverImageUrl")
-    is_active: bool = True
+    is_active: bool = Field(default=False, alias="isActive")
     sold_out: bool = Field(default=False, alias="soldOut")
     asset_image_urls: list[str] | None = Field(default=None,
                                                min_length=0, alias="assetImageUrls")
