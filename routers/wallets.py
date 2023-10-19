@@ -79,6 +79,38 @@ async def resolve_bank_account(body: BankAccountInput,  auth_context: Authentica
     return resolved_bank
 
 
+@router.delete("/banks/{bank_id}", status_code=200)
+async def delete_bank_account(bank_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+
+    bank_account: BankAccount = await find_record(BankAccount, Collections.bank_accounts, "uid", bank_id, raise_404=False)
+
+    if not bank_account:
+        logger.error(f"Bank account {bank_id} not found")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified does not exist.")
+
+    if bank_account.user_id != auth_context.user.uid:
+        logger.error(
+            f"Bank account {bank_id} does not belong to user {auth_context.user.uid}")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified does not belong to you.")
+
+    if bank_account.wallet != wallet.uid:
+        logger.error(
+            f"Bank account {bank_id} does not belong to wallet {wallet.uid}")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified does not belong to your wallet.")
+
+    if bank_account.is_active == False:
+        logger.error(f"Bank account {bank_id} is inactive")
+        raise HTTPException(
+            status_code=400, detail="Bank account specified is inactive.")
+
+    await _db[Collections.bank_accounts].delete_one({"uid": bank_id})
+
+    return
+
+
 @router.get("", status_code=200, response_model=Wallet)
 async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
@@ -149,6 +181,31 @@ async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int
     return await paginator.get_paginated_result(page, Transaction, exclude_fields=["wallet"])
 
 
+# get a single tx that belomgs to a user
+@router.get("/transactions/{tx_ref}", status_code=200, response_model=Transaction)
+async def get_wallet_transaction(tx_ref: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+    if not wallet:
+        logger.error(f"User {auth_context.user.uid} does not have a wallet")
+
+        raise HTTPException(
+            status_code=400, detail="You do not have a wallet yet! Please contact support.")
+
+    transaction: Transaction = await find_record(Transaction, Collections.transactions, "reference", tx_ref, raise_404=False)
+
+    if not transaction:
+        logger.error(f"Transaction {tx_ref} not found")
+        raise HTTPException(
+            status_code=400, detail="Transaction specified does not exist.")
+
+    if transaction.wallet != wallet.uid:
+        logger.error(
+            f"Transaction {tx_ref} does not belong to wallet {wallet.uid}")
+        raise HTTPException(
+            status_code=400, detail="Transaction specified does not belong to your wallet.")
+
+    return transaction
+
+
 @router.post("/withdraw", status_code=200)
 async def withdraw_from_wallet(body:  WithdrawalInput, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
@@ -198,6 +255,8 @@ async def withdraw_from_wallet(body:  WithdrawalInput, auth_context: Authenticat
         direction=TransactionDirection.outgoing,
         type=TransactionType.withdrawal,
         description="Withdrawal",
+        balance_before=wallet.balance,
+        balance_after=wallet.balance - body.amount,
     )
 
     result = _initiate_withdrawal(transaction, auth_context, bank_account)
@@ -227,6 +286,8 @@ async def topup_wallet(body:  TopupInput, auth_context: AuthenticationContext = 
         direction=TransactionDirection.incoming,
         type=TransactionType.topup,
         description="Add Funds",
+        balance_before=wallet.balance,
+        balance_after=wallet.balance + body.amount,
     )
 
     # initiate the transaction on flutterwave

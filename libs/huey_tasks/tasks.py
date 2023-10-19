@@ -12,7 +12,7 @@ from .utils import exp_backoff_task
 from .config import huey
 from libs.emails.send_email import dispatch_email
 from libs.utils.req_helpers import handle_response, make_req, make_url, Endpoints
-from models.users import UserDBModel, KYCDocumentType
+from models.users import UserDBModel, KYCDocumentType, KYCStatus
 from libs.utils.security import decrypt
 
 
@@ -115,7 +115,7 @@ def task_initiate_kyc_verification(user_id:  str):
 
     # Update the user's kyc status
     db[Collections.users].update_one(
-        {"uid": user_id}, {"$set": {"kyc_status": "approved"}})
+        {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED.value}})
 
     # Send an email to the user
     task_send_mail("kyc_approved", user["email"], {
@@ -123,7 +123,7 @@ def task_initiate_kyc_verification(user_id:  str):
 
     return
 
-    if user["kyc_status"] == "approved":
+    if user["kyc_status"] == KYCStatus.APPROVED.value:
         logger.info(f"User {user_id} has already been verified")
         raise CancelExecution(retry=False)
 
@@ -178,7 +178,7 @@ def task_initiate_kyc_verification(user_id:  str):
 
             # Update the user's kyc status
             db[Collections.users].update_one(
-                {"uid": user_id}, {"$set": {"kyc_status": "approved"}})
+                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED.value}})
 
             # Send an email to the user
             task_send_mail("kyc_approved", user["email"], {
@@ -245,7 +245,7 @@ def task_initiate_kyc_verification(user_id:  str):
 
             # Update the user's kyc status
             db[Collections.users].update_one(
-                {"uid": user_id}, {"$set": {"kyc_status": "approved"}})
+                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED.value}})
 
             # Send an email to the user
             task_send_mail("kyc_approved", user["email"], {

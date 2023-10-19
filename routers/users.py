@@ -498,8 +498,14 @@ async def kyc_doc_upload(file: UploadFile = File(...),    auth_context:  Authent
         raise HTTPException(
             400, "You already have a pending KYC submission.")
 
-    if user.kyc_info.document_url is not None:
-        raise HTTPException(400, "You have already uploaded a document.")
+    if user.kyc_info is None:
+        raise HTTPException(
+            400, "You have not submitted your KYC information.")
+
+    # check if kyc info has been uploaded before here
+    if (user.kyc_info.BVN is None) or (user.kyc_info.IDNumber is None) or (user.kyc_info.document_type is None) or (user.kyc_info.state is None) or (user.kyc_info.residential_address is None):
+        raise HTTPException(
+            400, "You have not submitted your KYC information.")
 
     upload_res = upload_image(file.file, {
         "folder": f"{settings.images_dir}/{user.uid}"

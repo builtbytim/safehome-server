@@ -70,6 +70,8 @@ class BaseTransactionModel(BaseModel):
     direction: TransactionDirection
     type: TransactionType
     description: str = Field(default="")
+    balance_before: float = Field(default=0.0, alias="balanceBefore")
+    balance_after: float = Field(default=0.0, alias="balanceAfter")
     created_at:  float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
     updated_at:  float = Field(
