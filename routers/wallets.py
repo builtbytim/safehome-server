@@ -10,7 +10,7 @@ from models.wallets import *
 from libs.utils.pure_functions import *
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from models.notifications import NotificationTypes
-from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users
+from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users, only_kyc_verified_users
 from libs.logging import Logger
 from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction, _get_supported_banks, _resolve_bank_account, _initiate_withdrawal
 
@@ -206,7 +206,7 @@ async def get_wallet_transaction(tx_ref: str, paid_membership_fee: bool = Depend
 
 
 @router.post("/withdraw", status_code=200)
-async def withdraw_from_wallet(body:  WithdrawalInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def withdraw_from_wallet(body:  WithdrawalInput, kyced: bool = Depends(only_kyc_verified_users),  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
@@ -270,7 +270,7 @@ async def withdraw_from_wallet(body:  WithdrawalInput,  paid_membership_fee: boo
 
 
 @router.post("/top-up", status_code=200, response_model=TopupOutput)
-async def topup_wallet(body:  TopupInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def topup_wallet(body:  TopupInput,  kyced: bool = Depends(only_kyc_verified_users),  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")

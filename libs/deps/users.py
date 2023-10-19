@@ -4,7 +4,7 @@ from pydantic import EmailStr
 from libs.db import _db, Collections
 from libs.utils.api_helpers import update_record
 from libs.config.settings import get_settings
-from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode, USER_EXLUCUDE_FIELDS, UserOutputModel
+from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode, USER_EXLUCUDE_FIELDS, UserOutputModel, KYCStatus
 from models.wallets import Wallet
 from libs.utils.security import _decode_jwt_token
 from datetime import datetime, timezone, timedelta
@@ -93,7 +93,7 @@ async def get_auth_context_optionally(bg_tasks: BackgroundTasks, token: str = De
     return await __get_auth_context(bg_tasks, token)
 
 
-async def get_user_wallet(context: AuthenticationContext = Depends(get_auth_context)) -> UserDBModel:
+async def get_user_wallet(context: AuthenticationContext = Depends(get_auth_context)) -> Wallet:
 
     wallet = await _db[Collections.wallets].find_one({"user_id": context.user.uid})
 
@@ -115,7 +115,24 @@ async def get_user_wallet(context: AuthenticationContext = Depends(get_auth_cont
     return None
 
 
-async def only_paid_users(context: AuthenticationContext | None = Depends(get_auth_context_optionally)) -> UserDBModel:
+async def only_kyc_verified_users(context: AuthenticationContext | None = Depends(get_auth_context_optionally)):
+
+    if context is None:
+        return
+
+    if not context.user.kyc_status == KYCStatus.APPROVED:
+        if context.user.kyc_status == KYCStatus.PENDING:
+            raise HTTPException(
+                status_code=400, detail="Your KYC is still pending, you cannot perform this action.")
+        else:
+
+            raise HTTPException(
+                status_code=400, detail="You must submit your KYC information to perform this action.", headers={"X-ACTION": "VERIFY_KYC"})
+
+    return True
+
+
+async def only_paid_users(context: AuthenticationContext | None = Depends(get_auth_context_optionally)) -> bool:
 
     if context is None:
         return

@@ -12,7 +12,7 @@ from libs.utils.pure_functions import *
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from models.notifications import NotificationTypes
-from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users
+from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users, only_kyc_verified_users
 from libs.logging import Logger
 
 logger = Logger(f"{__package__}.{__name__}")
@@ -82,7 +82,7 @@ async def get_investible_asset(uid: str, auth_context: AuthenticationContext = D
 
 
 @router.post("/assets/invest", status_code=200, response_model=TopupOutput | None)
-async def create_investment(body: InvestmentInput, auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
+async def create_investment(body: InvestmentInput, kyced: bool = Depends(only_kyc_verified_users), auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
 
     if not user_wallet:
         raise HTTPException(status_code=400,
