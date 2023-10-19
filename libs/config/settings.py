@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     mail_server:  str = "https://mail.com"
     mail_starttls: bool = False
     mail_ssl_tls:  bool = True
-    mail_display_name: str = "Safehome Team"
+    mail_display_name: str = "Safehome Cooperative"
     mail_domain:  str = "https://mail.com"
     mail_domain_username:  str = "admin"
     otp_interval: int = 300  # seconds
