@@ -74,10 +74,10 @@ class States(str, Enum):
 
 
 class UserRoles(str, Enum):
-    ADMIN = "admin"
-    USER = "user"
-    GUEST = "guest"
-    NONE = "none"
+    ADMIN = "ADMIN"
+    USER = "USER"
+    GUEST = "GUEST"
+    NONE = "NONE"
 
 
 class KYCDocumentType(str, Enum):
@@ -89,9 +89,9 @@ class KYCDocumentType(str, Enum):
 
 
 class KYCStatus(str, Enum):
-    APPROVED = "approved"
-    PENDING = "pending"
-    REJECTED = "rejected"
+    APPROVED = "APPROVED"
+    PENDING = "PENDING"
+    REJECTED = "REJECTED"
 
 
 class AuthProviders(str, Enum):

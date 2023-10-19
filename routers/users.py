@@ -463,11 +463,11 @@ async def add_kyc_info(body:  KYCVerificationInput,  auth_context:  Authenticati
     user: UserDBModel = auth_context.user
 
     if user.kyc_status == KYCStatus.APPROVED:
-        raise HTTPException(400, "Your KYC is already approved")
+        raise HTTPException(400, "Your KYC is already approved.")
 
     if user.kyc_status == KYCStatus.PENDING:
         raise HTTPException(
-            400, "You already have an existing KYC request pending.")
+            400, "You already have a pending KYC submission.")
 
     kyc_info = UserKYCInfo(
         residential_address=body.residential_address,
