@@ -41,15 +41,19 @@ async def get_user_notifications_stats(auth_context: AuthenticationContext = Dep
 @router.get("", status_code=200, response_model=PaginatedResult)
 async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
-    filters = {
+    root_filter = {
         "user_id": auth_context.user.uid,
+    }
+
+    filters = {
+
     }
 
     if read:
         filters["read"] = read
 
     paginator = Paginator(Collections.notifications,
-                          "created_at", top_down_sort=True, filters=filters, per_page=limit)
+                          "created_at", top_down_sort=True,  root_filter=root_filter, filters=filters, per_page=limit)
 
     res = await paginator.get_paginated_result(page, Notification)
     return res

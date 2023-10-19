@@ -36,8 +36,14 @@ class Paginator:
         self.current_page = 1
         self.init = False
         self.col_name = col_name
-        self.filters = filters
         self.root_filter = root_filter
+
+        if root_filter:
+            self.filters = {**root_filter, **filters}
+
+        else:
+            self.filters = filters
+
         self.query = None
         self.num_pages = None
         self.filter_func = filter_func

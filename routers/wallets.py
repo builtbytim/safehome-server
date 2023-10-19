@@ -100,8 +100,11 @@ async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int
         raise HTTPException(
             status_code=400, detail="You do not have a wallet yet! Please contact support.")
 
-    filters = {
+    root_filter = {
         "wallet": wallet.uid,
+    }
+
+    filters = {
     }
 
     if tx_type != "all":
@@ -140,6 +143,7 @@ async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int
         top_down_sort=True,
         include_crumbs=True,
         per_page=limit,
+        root_filter=root_filter,
     )
 
     return await paginator.get_paginated_result(page, Transaction, exclude_fields=["wallet"])

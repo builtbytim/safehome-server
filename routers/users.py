@@ -483,6 +483,31 @@ async def add_kyc_info(body:  KYCVerificationInput,  auth_context:  Authenticati
 
     user.kyc_info = kyc_info
 
+    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
+
+
+@router.post("/kyc/upload", status_code=200, )
+async def kyc_doc_upload(file: UploadFile = File(...),    auth_context:  AuthenticationContext = Depends(get_auth_context)):
+
+    user = auth_context.user
+
+    if user.kyc_status == KYCStatus.APPROVED:
+        raise HTTPException(400, "Your KYC is already approved.")
+
+    if user.kyc_status == KYCStatus.PENDING:
+        raise HTTPException(
+            400, "You already have a pending KYC submission.")
+
+    if user.kyc_info.document_url is not None:
+        raise HTTPException(400, "You have already uploaded a document.")
+
+    upload_res = upload_image(file.file, {
+        "folder": f"{settings.images_dir}/{user.uid}"
+    })
+
+    user.kyc_info.document_url = encrypt(
+        upload_res["secure_url"].encode()).hex()
+
     user.kyc_status = KYCStatus.PENDING
 
     await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
@@ -525,30 +550,5 @@ async def kyc_document(document_type:  DocumentTypes = Form(alias='documentType'
 
     return kyc_photo_auth_code
 
-
-@router.post("/kyc/photo", status_code=200, )
-async def kyc_photo(file: UploadFile = File(...),   auth_code: AuthCode = Depends(get_auth_code)):
-
-    v = auth_code.verify_action(ActionIdentifiers.VERIFY_KYC_PHOTO)
-
-    if not v:
-        raise HTTPException(400, "Invalid Auth Code")
-
-    user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", auth_code.user_id, raise_404=True)
-
-    if user.kyc_photo is not None:
-        raise HTTPException(400, "KYC photo uploaded already")
-
-    upload_res = upload_image(file.file, {
-        "folder": f"{settings.images_dir}/{user.uid}"
-    })
-
-    user.kyc_photo = upload_res["secure_url"]
-
-    user.avatar_url = upload_res["secure_url"]
-
-    user.kyc_status = KYCStatus.PENDING
-
-    await update_record(UserDBModel, user.model_dump(), Collections.users, "uid")
 
     """

@@ -328,6 +328,7 @@ class UserKYCInfo(BaseModel):
         default_factory=get_utc_timestamp, alias="createdAt")
     BVN:  str = Field(min_length=11,  alias="BVN")
     IDNumber: str = Field(min_length=10, alias="IDNumber")
+    document_url: str | None = Field(alias="documentUrl", default=None)
     approved:  bool = Field(default=False)
     flagged:  bool = Field(default=False)
 
