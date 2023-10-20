@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from libs.config.settings import get_settings
 from models.uploads import *
 from libs.utils.pure_functions import *
 from models.users import AuthenticationContext
-from libs.utils.security import scrypt_hash
-from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
-from libs.deps.users import get_user_by_email, get_auth_context_optionally
+from libs.deps.users import get_auth_context
 from libs.cloudinary.uploader import upload_image
+from libs.logging import Logger
 
+
+logger = Logger(f"{__package__}.{__name__}")
 
 settings = get_settings()
 
@@ -20,19 +21,16 @@ router = APIRouter(responses={
 @router.post("/images", status_code=201, response_model=UploadImageOutput)
 async def upload_image_to_cloudinary(
     file: UploadFile = File(...),
-    auth_context: AuthenticationContext | None = Depends(get_auth_context_optionally), folder_id: str | None = Query(default_factory=get_uuid4)
+    auth_context: AuthenticationContext | None = Depends(get_auth_context)
 ):
 
     if file.content_type not in settings.allowed_image_content_types:
         raise HTTPException(400, "invalid image content type")
 
-    if auth_context:
-        file_group = auth_context.user.uid
-    else:
-        file_group = folder_id
+    folder_name = f"{settings.images_dir}/{auth_context.user.uid}"
 
     result = upload_image(file.file, {
-        "folder": f"{settings.images_dir}/{file_group}"
+        "folder": folder_name
     })
 
     return UploadImageOutput(**result)

@@ -21,11 +21,11 @@ class IntervalsToSeconds(str, Enum):
     yearly = 31536000
 
 
-def is_valid_savings_plan_date_range(start_date:  float, end_date:  float, interval:  IntervalsToSeconds):
+def is_valid_savings_plan_date_range(start_date:  float, end_date:  float, interval:  Intervals):
 
     diff = end_date - start_date
-
-    if diff <= interval.value * 2:
+    threshold = float(IntervalsToSeconds[interval.name].value) * 2
+    if diff <= threshold:
         return False
 
     return True
@@ -60,13 +60,6 @@ class GoalSavingsPlanInput(BaseModel):
                 "Amount to save at interval must be less than goal amount")
         return v
 
-    @validator("goal_amount")
-    def goal_amount_must_be_divisible_by_amount_to_save_at_interval(cls, v, values, **kwargs):
-        if values["goal_amount"] % v != 0:
-            raise ValueError(
-                "Amount to save at interval must be divisible by goal amount")
-        return v
-
     @validator("start_date")
     def start_date_must_be_future(cls, v):
         if v < get_utc_timestamp():
@@ -90,6 +83,8 @@ class GoalSavingsPlanInput(BaseModel):
 
         if v <= values["start_date"]:
             raise ValueError("End date must be greater than start date")
+
+        return v
 
     @validator("end_date")
     def end_date_is_at_least_7_days_from_start_date(cls, v, values, **kwargs):

@@ -406,9 +406,9 @@ class UserOutputModel(UserBaseModel):
     security_questions: UserSecurityQuestions | None = Field(
         default=None, alias="securityQuestions")
     address: Union[str, None] = Field(
-        default=None,  min_length=2, max_length=35)
+        default=None,  min_length=2, max_length=256)
     state: Union[str, None] = Field(
-        default=None,  min_length=2, max_length=35)
+        default=None,  min_length=2, max_length=64)
     avatar_url: Union[str, None] = Field(default=None, alias="avatarUrl")
     gender: Union[Genders, None] = None
     auth_provider: AuthProviders = Field(

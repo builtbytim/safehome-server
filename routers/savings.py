@@ -26,8 +26,10 @@ router = APIRouter(responses={
 }, tags=["Savings"], dependencies=[Depends(only_paid_users)])
 
 
-def calculate_savings_plan_cycles(start_date: float, end_date: float, interval: IntervalsToSeconds):
-    return (end_date - start_date) / interval.value
+def calculate_savings_plan_cycles(start_date: float, end_date: float, interval: Intervals):
+    threshold = float(IntervalsToSeconds[interval.name].value)
+
+    return (end_date - start_date) / threshold
 
 
 # create goal savings plan
