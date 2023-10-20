@@ -270,7 +270,7 @@ async def withdraw_from_wallet(body:  WithdrawalInput, kyced: bool = Depends(onl
 
 
 @router.post("/top-up", status_code=200, response_model=TopupOutput)
-async def topup_wallet(body:  TopupInput,  kyced: bool = Depends(only_kyc_verified_users),  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def topup_wallet(body:  TopupInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")

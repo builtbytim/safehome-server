@@ -11,6 +11,12 @@ import phonenumbers
 settings = get_settings()
 
 
+class FundSource(str, Enum):
+    wallet = "wallet"
+    bank_account = "bank_account"
+    card = "card"
+
+
 class TransactionStatus(str, Enum):
     pending = "pending"
     failed = "failed"

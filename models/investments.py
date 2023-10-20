@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from enum import Enum
 from pydantic_settings import SettingsConfigDict
 from libs.utils.pure_functions import *
+from .payments import FundSource
 
 
 class OwnersClubs(str, Enum):
@@ -9,11 +10,6 @@ class OwnersClubs(str, Enum):
     home_owners_club = "home_owners_club"
     office_owners_club = "office_owners_club"
     all = "all"
-
-
-class FundSource(str, Enum):
-    wallet = "wallet"
-    bank_account = "bank_account"
 
 
 class AssetProps(BaseModel):
