@@ -13,8 +13,9 @@ settings = get_settings()
 
 class FundSource(str, Enum):
     wallet = "wallet"
-    bank_account = "bank_account"
+    bank_account = "bank"
     card = "card"
+    bank = "bank"
 
 
 class TransactionStatus(str, Enum):
@@ -24,12 +25,14 @@ class TransactionStatus(str, Enum):
 
 
 class TransactionType(str, Enum):
+    membership_fee = "membership_fee"
     credit = "credit"
     debit = "debit"
     topup = "topup"
     withdrawal = "withdrawal"
     investment = "investment"
-    membership_fee = "membership_fee"
+    savings = "savings"
+    savings_add_funds = "savings_add_funds"
 
 
 class TransactionDirection(str, Enum):
@@ -70,6 +73,8 @@ class BaseTransactionModel(BaseModel):
     reference:  str = Field(
         default_factory=get_tx_reference, alias="reference")
     tx_id: str | None = Field(alias="txId", default=None)
+    fund_source: FundSource = Field(
+        default=FundSource.bank_account, alias="fundSource")
     amount:  float = Field(ge=0.0)
     fee: float = Field(default=0.0)
     currency: str = Field(default=settings.default_currency)

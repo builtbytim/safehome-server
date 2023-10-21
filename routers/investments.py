@@ -108,7 +108,6 @@ async def create_investment(body: InvestmentInput, kyced: bool = Depends(only_ky
         type=TransactionType.investment,
         description=f"Investment in {asset.asset_name}",
         balance_before=user_wallet.balance,
-        balance_after=user_wallet.balance - amount,
     )
 
     investment = Investment(
@@ -179,6 +178,7 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
 
     root_filter = {
         "investor_uid": auth_context.user.uid,
+        "is_active": True
     }
 
     filters = {}
@@ -224,6 +224,8 @@ async def get_user_investment_stats(auth_context: AuthenticationContext = Depend
     filters = {
         "investor_uid": auth_context.user.uid,
         "completed":  False,
+        "is_active": True
+
     }
 
     investments = await _db[Collections.investments].find(filters).to_list(length=None)

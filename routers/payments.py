@@ -8,6 +8,7 @@ from models.payments import *
 from models.investments import Investment
 from models.notifications import NotificationTypes
 from models.wallets import Wallet
+from models.savings import GoalSavingsPlan, FundSource
 from libs.utils.pure_functions import *
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from libs.deps.users import get_auth_context, get_user_wallet
@@ -146,11 +147,13 @@ async def complete_payment(req:  Request, ):
 
             the_wallet.total_amount_invested += transaction.amount
 
+            transaction.balance_after = the_wallet.balance
+
             await update_record(Investment, the_investment.model_dump(), Collections.investments, "uid", refresh_from_db=True)
 
             # fetch the asset for the investment
 
-            asset = _db[Collections.investible_assets].find_one(
+            asset = await _db[Collections.investible_assets].find_one(
                 {"uid": the_investment.asset_uid})
 
             if not asset:
@@ -160,6 +163,34 @@ async def complete_payment(req:  Request, ):
 
             task_create_notification(
                 the_investment.investor_uid, "Investment Successful", f"Your investment in {asset['asset_name']} was successful", NotificationTypes.investment)
+
+        elif transaction.type == TransactionType.savings_add_funds:
+
+            the_savings_plan = await _db[Collections.goal_savings_plans].find_one({
+                "payment_references": {
+                    "$elemMatch": {
+
+                        "$eq": transaction.reference
+
+                    }
+                }
+            })
+
+            if not the_savings_plan:
+                logger.error(
+                    f"Unable to find savings plan with payment reference {transaction.reference}")
+                return failed_redirect
+
+            the_savings_plan = GoalSavingsPlan(**the_savings_plan)
+
+            the_savings_plan.amount_saved += transaction.amount
+
+            transaction.balance_after = the_wallet.balance
+
+            await update_record(GoalSavingsPlan, the_savings_plan.model_dump(), Collections.goal_savings_plans, "uid")
+
+            task_create_notification(
+                transaction.initiator, "Add Fund to Savings Plan Successful", f"Your added funds to savings plan {the_savings_plan.goal_name} ", NotificationTypes.savings)
 
         elif transaction.type == TransactionType.membership_fee:
 
@@ -176,6 +207,8 @@ async def complete_payment(req:  Request, ):
 
             user.has_paid_membership_fee = True
 
+            transaction.balance_after = the_wallet.balance
+
             await update_record(UserDBModel, user.model_dump(), Collections.users, "uid", refresh_from_db=True)
 
             task_create_notification(
@@ -191,10 +224,9 @@ async def complete_payment(req:  Request, ):
                 return failed_redirect
 
             the_wallet.balance += transaction.amount
+            transaction.balance_after = the_wallet.balance
             the_wallet.total_amount_deposited += transaction.amount
             the_wallet.last_transaction_at = get_utc_timestamp()
-
-            await update_record(Wallet, the_wallet.model_dump(), Collections.wallets, "uid", refresh_from_db=True)
 
             task_create_notification(
                 transaction.initiator, "Added funds successfully", f"Your funding of {transaction.amount} was successful", NotificationTypes.wallet)
@@ -209,6 +241,8 @@ async def complete_payment(req:  Request, ):
             # send mail
 
         await update_record(Transaction, transaction.model_dump(), Collections.transactions, "reference", refresh_from_db=True)
+
+        await update_record(Wallet, the_wallet.model_dump(), Collections.wallets, "uid", refresh_from_db=True)
 
         return success_redirect
 

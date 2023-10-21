@@ -5,6 +5,11 @@ from libs.utils.pure_functions import *
 from .payments import FundSource
 
 
+class PaymentModes(str, Enum):
+    manual = "manual"
+    auto = "auto"
+
+
 class Intervals(str, Enum):
     daily = "daily"
     weekly = "weekly"
@@ -21,6 +26,17 @@ class IntervalsToSeconds(str, Enum):
     yearly = 31536000
 
 
+class UserSavingsStats(BaseModel):
+    balance: float
+    savings_count: int = Field(alias="savingsCount")
+    goal_savings_balance: float = Field(alias="goalSavingsBalance")
+    locked_savings_balance: float = Field(alias="lockedSavingsBalance")
+    total_saved: float = Field(alias="totalSaved")
+    total_withdrawn: float = Field(alias="totalWithdrawn")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 def is_valid_savings_plan_date_range(start_date:  float, end_date:  float, interval:  Intervals):
 
     diff = end_date - start_date
@@ -34,8 +50,10 @@ def is_valid_savings_plan_date_range(start_date:  float, end_date:  float, inter
 class GoalSavingsPlanInput(BaseModel):
     goal_name: str = Field(min_length=3, max_length=64, alias="goalName")
     goal_amount: float = Field(gt=0.0, alias="goalAmount")
+    payment_mode: PaymentModes = Field(alias="paymentMode")
     goal_image_url: str | None = Field(default=None, alias="goalImageUrl")
-    goal_description: str = Field(alias="goalDescription", min_length=32)
+    goal_description: str | None = Field(
+        alias="goalDescription", min_length=8, default=None)
     fund_source: FundSource = Field(alias="fundSource")
     interval: Intervals = Field(alias="interval")
     start_date: float = Field(alias="startDate")
@@ -102,18 +120,29 @@ class GoalSavingsPlanInput(BaseModel):
 
 
 class GoalSavingsPlan(GoalSavingsPlanInput):
-    cycles: int = Field(ge=1)
-    is_active: bool = Field(default=False, alias="isActive")
-    is_completed: bool = Field(default=False, alias="isCompleted")
-    is_withdrawn: bool = Field(default=False, alias="isWithdrawn")
-    amount_saved: float = Field(gt=0.0, alias="amountSaved", default=0.0)
+    uid: str = Field(alias="uid", default_factory=get_uuid4)
+    cycles: float = Field(ge=1)
+    is_active: bool = Field(default=True, alias="isActive")
+    completed: bool = Field(default=False, alias="completed")
+    withdrawn: bool = Field(default=False, alias="withdrawn")
+    amount_saved: float = Field(ge=0.0, alias="amountSaved", default=0.0)
     amount_withdrawn: float = Field(
-        gt=0.0, alias="amountWithdrawn", default=0.0)
+        ge=0.0, alias="amountWithdrawn", default=0.0)
+    payment_references: list[str] = Field(
+        default_factory=list, alias="paymentReferences")
     user_id: str = Field(alias="userId")
     wallet_id: str = Field(alias="walletId")
     created_at:  float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
     updated_at:  float = Field(
         default_factory=get_utc_timestamp, alias="updatedAt")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class FundGoalSavingsInput(BaseModel):
+    amount_to_add: float = Field(gt=0.0, alias="amountToAdd")
+    fund_source: FundSource = Field(alias="fundSource")
+    goal_savings_id: str = Field(alias="goalSavingsId")
 
     model_config = SettingsConfigDict(populate_by_name=True)

@@ -10,6 +10,7 @@ class NotificationTypes(str, Enum):
     system = "system"
     transaction = "transaction"
     investment = "investment"
+    savings = "savings"
     wallet = "wallet"
     kyc = "kyc"
     account = "account"

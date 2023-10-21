@@ -286,7 +286,6 @@ async def topup_wallet(body:  TopupInput,  paid_membership_fee: bool = Depends(o
         type=TransactionType.topup,
         description="Add Funds",
         balance_before=wallet.balance,
-        balance_after=wallet.balance + body.amount,
     )
 
     # initiate the transaction on flutterwave
@@ -365,6 +364,9 @@ async def complete_topup_wallet(req:  Request, ):
         wallet: Wallet = await find_record(Wallet, Collections.wallets, "uid", transaction.wallet)
 
         wallet.balance += transaction.amount
+
+        transaction.balance_after = wallet.balance
+
         wallet.total_amount_deposited += transaction.amount
         wallet.last_transaction_at = transaction.created_at
 

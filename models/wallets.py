@@ -42,6 +42,9 @@ class Wallet(BaseModel):
         default=0.0, alias="totalAmountInvested")
     total_amount_invested_withdrawn: float = Field(
         default=0.0, alias="totalAmountInvestedWithdrawn")
+    total_amount_saved: float = Field(default=0.0, alias="totalAmountSaved")
+    total_amount_saved_withdrawn: float = Field(
+        default=0.0, alias="totalAmountSavedWithdrawn")
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
