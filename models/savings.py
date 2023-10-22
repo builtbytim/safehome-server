@@ -146,3 +146,42 @@ class FundGoalSavingsInput(BaseModel):
     goal_savings_id: str = Field(alias="goalSavingsId")
 
     model_config = SettingsConfigDict(populate_by_name=True)
+
+
+# ---------------------------------------------
+
+
+class LockedSavingsPlanInput(BaseModel):
+    lock_name: str = Field(min_length=3, max_length=64, alias="lockName")
+    payment_mode: PaymentModes = Field(alias="paymentMode")
+    fund_source: FundSource = Field(alias="fundSource")
+    interval: Intervals = Field(alias="interval")
+    asset_id: str = Field(alias="assetId")
+    lock_duration_in_months: int = Field(
+        ge=1, le=6, alias="lockDurationInMonths")
+    amount_to_save_at_interval: float = Field(
+        gt=0.0, alias="amountToSaveAtInterval")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+    @validator("amount_to_save_at_interval")
+    def amount_to_save_at_interval_must_be_2dp(cls, v):
+        return round(v, 2)
+
+
+class LockedSavingsPlan(LockedSavingsPlanInput):
+    uid: str = Field(alias="uid", default_factory=get_uuid4)
+    is_active: bool = Field(default=True, alias="isActive")
+    completed: bool = Field(default=False, alias="completed")
+    invested: bool = Field(default=False, alias="invested")
+    amount_saved: float = Field(ge=0.0, alias="amountSaved", default=0.0)
+    payment_references: list[str] = Field(
+        default_factory=list, alias="paymentReferences")
+    user_id: str = Field(alias="userId")
+    wallet_id: str = Field(alias="walletId")
+    created_at:  float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+    updated_at:  float = Field(
+        default_factory=get_utc_timestamp, alias="updatedAt")
+
+    model_config = SettingsConfigDict(populate_by_name=True)

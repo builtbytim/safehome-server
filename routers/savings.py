@@ -7,6 +7,7 @@ from models.payments import Transaction
 from libs.utils.flutterwave import _initiate_payment
 from models.payments import *
 from models.savings import *
+from models.investments import InvestibleAsset
 from models.wallets import Wallet
 from libs.utils.pure_functions import *
 from libs.utils.pagination import Paginator, PaginatedResult
@@ -182,6 +183,29 @@ async def fund_goal_savings_plan(body:  FundGoalSavingsInput, auth_context:  Aut
         return api_response
 
 
+# create locked savings plan
+@router.post("/locked", status_code=200, response_model=LockedSavingsPlan)
+async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyc_verified_user:  bool = Depends(only_kyc_verified_users)):
+
+    if not user_wallet:
+        raise HTTPException(status_code=400,
+                            detail="You cannot create a savings plan as you do not have a wallet.")
+
+    asset = await find_record(InvestibleAsset, Collections.investible_assets, "uid", body.asset_id)
+
+    if not asset:
+        raise HTTPException(status_code=404,
+                            detail="The asset you are trying to lock funds for does not exist.")
+
+    # create the savings plan
+    savings_plan = LockedSavingsPlan(
+        **body.model_dump(), user_id=auth_context.user.uid, wallet_id=user_wallet.uid, )
+
+    await _db[Collections.locked_savings_plans].insert_one(savings_plan.model_dump())
+
+    return savings_plan
+
+
 @router.get("/stats", status_code=200, response_model=UserSavingsStats)
 async def get_user_savings_stats(auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
 
@@ -205,3 +229,22 @@ async def get_user_savings_stats(auth_context: AuthenticationContext = Depends(g
                             locked_savings_balance=0,
                             total_saved=user_wallet.total_amount_saved, total_withdrawn=user_wallet.total_amount_saved_withdrawn
                             )
+
+
+# fetch my locked savings
+@router.get("/locked", status_code=200, response_model=PaginatedResult)
+async def get_my_locked_savings_plans(auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users),  page: int = Query(1, gt=0), limit: int = Query(10, gt=0), completed:  bool = Query(False)):
+
+    root_filter = {
+        "user_id":  auth_context.user.uid
+    }
+
+    if completed:
+        root_filter["completed"] = True
+
+    filters = {}
+
+    paginator = Paginator(Collections.locked_savings_plans, "created_at",
+                          top_down_sort=True, per_page=limit, filters=filters, root_filter=root_filter)
+
+    return await paginator.get_paginated_result(page, LockedSavingsPlan)
