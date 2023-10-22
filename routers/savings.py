@@ -215,18 +215,23 @@ async def get_user_savings_stats(auth_context: AuthenticationContext = Depends(g
         "is_active":  True
     }
 
-    savings_plans = await _db[Collections.goal_savings_plans].find(filters).to_list(None)
+    goal_savings_plans = await _db[Collections.goal_savings_plans].find(filters).to_list(None)
 
-    savings_count = len(savings_plans)
+    locked_savings_plans = await _db[Collections.locked_savings_plans].find(filters).to_list(None)
 
-    total_savings = 0
+    savings_count = len(goal_savings_plans) + len(locked_savings_plans)
 
-    for savings_plan in savings_plans:
-        total_savings += savings_plan["amount_saved"]
+    total_goal_savings = 0
+    total_locked_savings = 0
 
-    return UserSavingsStats(balance=total_savings, savings_count=savings_count,
-                            goal_savings_balance=total_savings,
-                            locked_savings_balance=0,
+    for savings_plan in goal_savings_plans:
+        total_goal_savings += savings_plan["amount_saved"]
+
+    for savings_plan in locked_savings_plans:
+        total_locked_savings += savings_plan["amount_saved"]
+
+    return UserSavingsStats(balance=total_locked_savings + total_goal_savings, savings_count=savings_count,
+                            goal_savings_balance=total_goal_savings, locked_savings_balance=total_locked_savings,
                             total_saved=user_wallet.total_amount_saved, total_withdrawn=user_wallet.total_amount_saved_withdrawn
                             )
 
