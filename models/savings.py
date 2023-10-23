@@ -152,7 +152,6 @@ class FundGoalSavingsInput(BaseModel):
 
 
 class LockedSavingsPlanInput(BaseModel):
-    lock_name: str = Field(min_length=3, max_length=64, alias="lockName")
     payment_mode: PaymentModes = Field(alias="paymentMode")
     fund_source: FundSource = Field(alias="fundSource")
     interval: Intervals = Field(alias="interval")
@@ -170,6 +169,7 @@ class LockedSavingsPlanInput(BaseModel):
 
 
 class LockedSavingsPlan(LockedSavingsPlanInput):
+    lock_name: str = Field(min_length=3, max_length=64, alias="lockName")
     uid: str = Field(alias="uid", default_factory=get_uuid4)
     is_active: bool = Field(default=True, alias="isActive")
     completed: bool = Field(default=False, alias="completed")
