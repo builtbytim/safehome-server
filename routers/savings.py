@@ -191,7 +191,7 @@ async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context
         raise HTTPException(status_code=400,
                             detail="You cannot create a savings plan as you do not have a wallet.")
 
-    asset:  InvestibleAsset = await find_record(InvestibleAsset, Collections.investible_assets, "uid", body.asset_id)
+    asset:  InvestibleAsset | None = await find_record(InvestibleAsset, Collections.investible_assets, "uid", body.asset_id)
 
     if not asset:
         raise HTTPException(status_code=404,
@@ -199,7 +199,7 @@ async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context
 
     # create the savings plan
     savings_plan = LockedSavingsPlan(
-        **body.model_dump(), lock_name=f"{asset.asset_name}", user_id=auth_context.user.uid, wallet_id=user_wallet.uid)
+        **body.model_dump(), lock_name=asset.asset_name, user_id=auth_context.user.uid, wallet_id=user_wallet.uid)
 
     await _db[Collections.locked_savings_plans].insert_one(savings_plan.model_dump())
 
