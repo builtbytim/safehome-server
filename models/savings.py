@@ -48,6 +48,9 @@ def is_valid_savings_plan_date_range(start_date:  float, end_date:  float, inter
 
 
 class GoalSavingsPlanInput(BaseModel):
+
+    created_at:  float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
     goal_name: str = Field(min_length=3, max_length=64, alias="goalName")
     goal_amount: float = Field(gt=0.0, alias="goalAmount")
     payment_mode: PaymentModes = Field(alias="paymentMode")
@@ -79,20 +82,20 @@ class GoalSavingsPlanInput(BaseModel):
         return v
 
     @validator("start_date")
-    def start_date_must_be_future(cls, v):
-        if v < get_utc_timestamp():
+    def start_date_must_be_future(cls, v, values):
+        if v <= values["created_at"]:
             raise ValueError("Start date must be in the future")
         return v
 
     @validator("start_date")
-    def start_must_be_at_least_1_day_from_now(cls, v):
-        if v < get_utc_timestamp() + 86400:
+    def start_must_be_at_least_1_day_from_now(cls, v, values):
+        if v < values["created_at"] + 86400:
             raise ValueError("Start date must be at least 1 day from now")
         return v
 
     @validator("end_date")
     def end_date_must_be_future(cls, v, values, **kwargs):
-        if v < values["start_date"]:
+        if v <= values["created_at"]:
             raise ValueError("End date must be in the future")
         return v
 
@@ -132,8 +135,6 @@ class GoalSavingsPlan(GoalSavingsPlanInput):
         default_factory=list, alias="paymentReferences")
     user_id: str = Field(alias="userId")
     wallet_id: str = Field(alias="walletId")
-    created_at:  float = Field(
-        default_factory=get_utc_timestamp, alias="createdAt")
     updated_at:  float = Field(
         default_factory=get_utc_timestamp, alias="updatedAt")
 
