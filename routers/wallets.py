@@ -333,6 +333,22 @@ async def complete_topup_wallet(req:  Request, ):
             f"Transaction with reference {tx_ref} not found")
         return failed_redirect
 
+    if transaction.status == TransactionStatus.successful:
+        return success_redirect
+
+    if transaction.status == TransactionStatus.failed:
+        return failed_redirect
+
+    if transaction.type != TransactionType.topup:
+        logger.error(
+            f"Transaction with reference {tx_ref} is not a topup transaction")
+        return failed_redirect
+
+    if transaction.direction != TransactionDirection.incoming:
+        logger.error(
+            f"Transaction with reference {tx_ref} is not an incoming transaction")
+        return failed_redirect
+
     if tx_status == "successful" or tx_status == "completed":
 
         # verify the transaction on flutterwave

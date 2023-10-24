@@ -53,6 +53,9 @@ async def create_goal_savings_plan(body:  GoalSavingsPlanInput, auth_context:  A
 
     await _db[Collections.goal_savings_plans].insert_one(savings_plan.model_dump())
 
+    task_create_notification(
+        auth_context.user.uid, NotificationTypes.savings, "Savings Plan Created", f"You created a goal savings plan for {savings_plan.goal_name}.")
+
     return savings_plan
 
 
@@ -61,11 +64,10 @@ async def create_goal_savings_plan(body:  GoalSavingsPlanInput, auth_context:  A
 async def get_my_goal_savings_plans(auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users),  page: int = Query(1, gt=0), limit: int = Query(10, gt=0), completed:  bool = Query(False)):
 
     root_filter = {
-        "user_id":  auth_context.user.uid
+        "user_id":  auth_context.user.uid,
+        "is_active": True,
+        "completed":  completed
     }
-
-    if completed:
-        root_filter["completed"] = True
 
     filters = {}
 
@@ -154,6 +156,9 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
 
         await _db[Collections.transactions].insert_one(transaction.model_dump())
 
+        task_create_notification(
+            auth_context.user.uid, NotificationTypes.savings, "Savings Plan Funded", f"You funded a goal savings plan for {savings_plan.goal_name}.")
+
     elif body.fund_source == FundSource.bank_account:
 
         transaction.fund_source = FundSource.bank_account
@@ -203,6 +208,9 @@ async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context
 
     await _db[Collections.locked_savings_plans].insert_one(savings_plan.model_dump())
 
+    task_create_notification(
+        auth_context.user.uid, NotificationTypes.savings, "Locked Savings Plan Created", f"You created a locked savings plan for {savings_plan.lock_name}.")
+
     return savings_plan
 
 
@@ -242,11 +250,9 @@ async def get_my_locked_savings_plans(auth_context:  AuthenticationContext = Dep
 
     root_filter = {
         "user_id":  auth_context.user.uid,
-        "is_active": True
+        "is_active": True,
+        "completed":  completed
     }
-
-    if completed:
-        root_filter["completed"] = True
 
     filters = {}
 
@@ -338,8 +344,9 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
 
         savings_plan.amount_saved += body.amount_to_add
 
-        if savings_plan.amount_saved >= (asset.price / asset.units):
-            savings_plan.completed = True
+        # if savings_plan.amount_saved >= (asset.price / asset.units):
+
+        #     savings_plan.completed = True
 
         # update the wallet
 
@@ -352,6 +359,9 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
         # save the transaction
 
         await _db[Collections.transactions].insert_one(transaction.model_dump())
+
+        task_create_notification(
+            auth_context.user.uid, NotificationTypes.savings, "Locked Savings Plan Funded", f"You funded a locked savings plan for {savings_plan.lock_name}.")
 
     elif body.fund_source == FundSource.bank_account:
 

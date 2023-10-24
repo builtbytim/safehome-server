@@ -147,7 +147,7 @@ async def create_investment(body: InvestmentInput, kyced: bool = Depends(only_ky
         investment.is_active = True
 
         task_create_notification(
-            investment.investor_uid, "Investment Successful", f"Your investment in {asset.asset_name} was successful", NotificationTypes.investment)
+            investment.investor_uid, "Investment Successful", f"You invested {transaction.amount} in {asset.asset_name}", NotificationTypes.investment)
 
         await _db[Collections.investments].insert_one(investment.model_dump())
         await _db[Collections.transactions].insert_one(transaction.model_dump())
@@ -178,13 +178,11 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
 
     root_filter = {
         "investor_uid": auth_context.user.uid,
-        "is_active": True
+        "is_active": True,
+        "completed": completed
     }
 
     filters = {}
-
-    if completed:
-        root_filter["completed"] = True
 
     async def filter_for_items_with_correct_owner_club(item,):
 

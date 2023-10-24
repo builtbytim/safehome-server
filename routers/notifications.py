@@ -39,11 +39,16 @@ async def get_user_notifications_stats(auth_context: AuthenticationContext = Dep
 
 
 @router.get("", status_code=200, response_model=PaginatedResult)
-async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False), type: NotificationTypes = Query(default="all"), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     root_filter = {
         "user_id": auth_context.user.uid,
     }
+
+    if type != "all":
+        root_filter["notification_type"] = type.value
+
+    # match notifiations whose type start with the type query too
 
     filters = {
 

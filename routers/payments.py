@@ -8,7 +8,7 @@ from models.payments import *
 from models.investments import Investment
 from models.notifications import NotificationTypes
 from models.wallets import Wallet
-from models.savings import GoalSavingsPlan, FundSource
+from models.savings import GoalSavingsPlan, FundSource, LockedSavingsPlan
 from libs.utils.pure_functions import *
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from libs.deps.users import get_auth_context, get_user_wallet
@@ -72,6 +72,9 @@ async def initiate_membership_payment(auth_context: AuthenticationContext = Depe
 @router.get("/complete", status_code=200)
 async def complete_payment(req:  Request, ):
 
+    allowed_tx_types = [TransactionType.membership_fee, TransactionType.investment,
+                        TransactionType.savings_add_funds, TransactionType.locked_savings_add_funds]
+
     query = req.query_params
 
     tx_status = query.get("status", None)
@@ -97,6 +100,17 @@ async def complete_payment(req:  Request, ):
     if not transaction:
         logger.error(
             f"Transaction with reference {tx_ref} not found")
+        return failed_redirect
+
+    if transaction.status == TransactionStatus.successful:
+        return success_redirect
+
+    if transaction.status == TransactionStatus.failed:
+        return failed_redirect
+
+    if transaction.type not in allowed_tx_types:
+        logger.error(
+            f"Transaction type not allowed - {transaction.type}")
         return failed_redirect
 
     if tx_status == "successful" or tx_status == "completed":
@@ -190,7 +204,35 @@ async def complete_payment(req:  Request, ):
             await update_record(GoalSavingsPlan, the_savings_plan.model_dump(), Collections.goal_savings_plans, "uid")
 
             task_create_notification(
-                transaction.initiator, "Add Fund to Savings Plan Successful", f"Your added funds to savings plan {the_savings_plan.goal_name} ", NotificationTypes.savings)
+                transaction.initiator, "Add Fund to Savings Plan Successful", f"You added funds to savings plan {the_savings_plan.goal_name} ", NotificationTypes.savings)
+
+        elif transaction.type == TransactionType.locked_savings_add_funds:
+
+            the_savings_plan = await _db[Collections.locked_savings_plans].find_one({
+                "payment_references": {
+                    "$elemMatch": {
+
+                        "$eq": transaction.reference
+
+                    }
+                }
+            })
+
+            if not the_savings_plan:
+                logger.error(
+                    f"Unable to find locked savings plan with payment reference {transaction.reference}")
+                return failed_redirect
+
+            the_savings_plan = LockedSavingsPlan(**the_savings_plan)
+
+            the_savings_plan.amount_saved += transaction.amount
+
+            transaction.balance_after = the_wallet.balance
+
+            await update_record(LockedSavingsPlan, the_savings_plan.model_dump(), Collections.locked_savings_plans, "uid")
+
+            task_create_notification(
+                transaction.initiator, "Add Fund to Locked Savings Plan Successful", f"You added funds to locked savings plan {the_savings_plan.lock_name} ", NotificationTypes.savings)
 
         elif transaction.type == TransactionType.membership_fee:
 
