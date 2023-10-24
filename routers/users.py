@@ -66,16 +66,41 @@ async def user_sign_up(response:  Response, body:  UserInputModel):
 @router.put("",  response_model=UserDBModel, response_model_by_alias=True, response_model_exclude=USER_EXLUCUDE_FIELDS)
 async def update_user(body:  UserUpdateModel, paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
 
-    user = auth_context.user
+    user:  UserOutputModel = auth_context.user
 
-    update_data = body.model_dump(exclude_unset=True)
+    if get_utc_timestamp() - user.profile_updated_at < (60 * 2):
+        raise HTTPException(
+            400, "Profile was updated recently, please try again later")
+
+    if user.kyc_status == KYCStatus.PENDING:
+        raise HTTPException(400, "KYC is pending, please contact support.")
+
+    if user.kyc_status == KYCStatus.APPROVED:
+        raise HTTPException(
+            400, "KYC is approved, you cannot update your details.")
 
     # update the user object
 
-    for k, v in update_data.items():
-        setattr(user, k, v)
+    user.first_name = body.first_name
+    user.last_name = body.last_name
+    user.phone = body.phone
+
+    if body.gender:
+        user.gender = body.gender
+    if body.date_of_birth:
+        user.date_of_birth = body.date_of_birth
+
+    user.kyc_info.residential_address = body.residential_address
+    user.kyc_info.state = body.state
+    user.address = body.residential_address
+    user.state = body.state
+
+    user.profile_updated_at = get_utc_timestamp()
 
     updated_user = await update_record(UserDBModel, user.model_dump(), Collections.users, "uid", refresh_from_db=True)
+
+    task_create_notification(
+        user.uid, "Profile Updated", f"You updated your profile", NotificationTypes.account)
 
     return updated_user
 
@@ -152,7 +177,8 @@ async def sign_in(body:  OAuth2PasswordRequestForm = Depends()):
     user:  UserDBModel = await find_record(UserDBModel, Collections.users, "email", body.username.lower(), raise_404=False)
 
     if user is None:
-        raise HTTPException(401, "Account does not exist.")
+        raise HTTPException(
+            404, "We could not find an account with that email.")
 
     auth_code = AuthCode(
         user_id=user.uid, action=ActionIdentifiers.AUTHENTICATION, )

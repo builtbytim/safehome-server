@@ -33,6 +33,7 @@ class TransactionType(str, Enum):
     investment = "investment"
     savings = "savings"
     savings_add_funds = "savings_add_funds"
+    locked_savings_add_funds = "locked_savings_add_funds"
 
 
 class TransactionDirection(str, Enum):

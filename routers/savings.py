@@ -77,17 +77,17 @@ async def get_my_goal_savings_plans(auth_context:  AuthenticationContext = Depen
 
 # fund a goal savings
 @router.post("/goals/fund", status_code=200, response_model=TopupOutput | None)
-async def fund_goal_savings_plan(body:  FundGoalSavingsInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyc_verified_user:  bool = Depends(only_kyc_verified_users)):
+async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyc_verified_user:  bool = Depends(only_kyc_verified_users)):
 
-    savings_plan: GoalSavingsPlan = await find_record(GoalSavingsPlan, Collections.goal_savings_plans, "uid", body.goal_savings_id)
-
-    if savings_plan.payment_mode == PaymentModes.auto.value:
-        raise HTTPException(status_code=400,
-                            detail="You cannot fund an auto savings plan.")
+    savings_plan: GoalSavingsPlan = await find_record(GoalSavingsPlan, Collections.goal_savings_plans, "uid", body.savings_id)
 
     if not savings_plan:
         raise HTTPException(status_code=404,
                             detail="The savings plan you are trying to fund does not exist.")
+
+    if savings_plan.payment_mode == PaymentModes.auto.value:
+        raise HTTPException(status_code=400,
+                            detail="You cannot fund an auto savings plan.")
 
     if savings_plan.user_id != auth_context.user.uid:
         raise HTTPException(status_code=403,
@@ -191,7 +191,7 @@ async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context
         raise HTTPException(status_code=400,
                             detail="You cannot create a savings plan as you do not have a wallet.")
 
-    asset:  InvestibleAsset | None = await find_record(InvestibleAsset, Collections.investible_assets, "uid", body.asset_id)
+    asset:  InvestibleAsset | None = await find_record(InvestibleAsset, Collections.investible_assets, "uid", body.asset_uid)
 
     if not asset:
         raise HTTPException(status_code=404,
@@ -238,10 +238,11 @@ async def get_user_savings_stats(auth_context: AuthenticationContext = Depends(g
 
 # fetch my locked savings
 @router.get("/locked", status_code=200, response_model=PaginatedResult)
-async def get_my_locked_savings_plans(auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users),  page: int = Query(1, gt=0), limit: int = Query(10, gt=0), completed:  bool = Query(False)):
+async def get_my_locked_savings_plans(auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users),  page: int = Query(1, gt=0), limit: int = Query(10, gt=0), completed:  bool = Query(False), include_asset: bool = Query(alias="includeAsset", default=True),):
 
     root_filter = {
-        "user_id":  auth_context.user.uid
+        "user_id":  auth_context.user.uid,
+        "is_active": True
     }
 
     if completed:
@@ -252,4 +253,130 @@ async def get_my_locked_savings_plans(auth_context:  AuthenticationContext = Dep
     paginator = Paginator(Collections.locked_savings_plans, "created_at",
                           top_down_sort=True, per_page=limit, filters=filters, root_filter=root_filter)
 
-    return await paginator.get_paginated_result(page, LockedSavingsPlan)
+    result = await paginator.get_paginated_result(page, LockedSavingsPlan)
+
+    # get the asset for each investment and set it to the asset info property of each item in the result
+
+    if include_asset:
+        for item in result.items:
+
+            asset = await _db[Collections.investible_assets].find_one({"uid":  item['assetUid']})
+
+            item['assetInfo'] = InvestibleAsset(
+                **asset).model_dump(by_alias=True)
+
+    return result
+
+
+# fund a locked savings
+@router.post("/locked/fund", status_code=200, response_model=TopupOutput | None)
+async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyc_verified_user:  bool = Depends(only_kyc_verified_users)):
+
+    savings_plan: LockedSavingsPlan = await find_record(LockedSavingsPlan, Collections.locked_savings_plans, "uid", body.savings_id)
+
+    if not savings_plan:
+        raise HTTPException(status_code=404,
+                            detail="The savings plan you are trying to fund does not exist.")
+
+    asset: InvestibleAsset = await find_record(InvestibleAsset, Collections.investible_assets, "uid", savings_plan.asset_uid)
+
+    if not asset:
+        raise HTTPException(status_code=404,
+                            detail="The asset you are trying to lock funds for does not exist.")
+
+    if savings_plan.payment_mode == PaymentModes.auto.value:
+        raise HTTPException(status_code=400,
+                            detail="You cannot fund an auto savings plan.")
+
+    if savings_plan.user_id != auth_context.user.uid:
+        raise HTTPException(status_code=403,
+                            detail="You are not authorized to fund this savings plan.")
+
+    if savings_plan.completed:
+        raise HTTPException(status_code=400,
+                            detail="You cannot fund a completed savings plan.")
+
+    if savings_plan.invested:
+        raise HTTPException(status_code=400,
+                            detail="You cannot fund an already invested savings plan.")
+
+    if savings_plan.amount_saved >= (asset.price / asset.units):
+        raise HTTPException(status_code=400,
+                            detail="You have already saved the required amount for this savings plan.")
+
+    if savings_plan.amount_saved + body.amount_to_add > (asset.price / asset.units):
+        raise HTTPException(status_code=400,
+                            detail="You cannot add more than the required amount to this savings plan.")
+
+    # create a transaction
+    transaction = Transaction(
+        initiator=auth_context.user.uid,
+        wallet=user_wallet.uid,
+        amount=body.amount_to_add,
+        direction=TransactionDirection.outgoing,
+        type=TransactionType.locked_savings_add_funds,
+        description=f"Fund Locked Savings Plan - {savings_plan.lock_name}",
+        balance_before=user_wallet.balance,
+    )
+
+    if body.fund_source == FundSource.wallet:
+
+        if user_wallet.balance < body.amount_to_add:
+            raise HTTPException(status_code=400,
+                                detail="You do not have enough balance to fund this savings plan.")
+
+        transaction.balance_after = user_wallet.balance - body.amount_to_add
+
+        # update the wallet
+        user_wallet.balance = user_wallet.balance - body.amount_to_add
+
+        transaction.fund_source = FundSource.wallet
+
+        transaction.status = TransactionStatus.successful
+
+        savings_plan.payment_references.append(transaction.reference)
+
+        savings_plan.amount_saved += body.amount_to_add
+
+        if savings_plan.amount_saved >= (asset.price / asset.units):
+            savings_plan.completed = True
+
+        # update the wallet
+
+        await update_record(Wallet, user_wallet.model_dump(), Collections.wallets, "uid")
+
+        # update the savings plan
+
+        await update_record(LockedSavingsPlan, savings_plan.model_dump(), Collections.locked_savings_plans, "uid")
+
+        # save the transaction
+
+        await _db[Collections.transactions].insert_one(transaction.model_dump())
+
+    elif body.fund_source == FundSource.bank_account:
+
+        transaction.fund_source = FundSource.bank_account
+
+        transaction.status = TransactionStatus.pending
+
+        # initiate payment
+        result = _initiate_payment(transaction, auth_context, customizations={
+            "title": f"Fund Savings Plan - {savings_plan.lock_name}",
+            "description": f"Fund Savings Plan - {savings_plan.lock_name}"
+
+        })
+
+        api_response = {
+            "redirect_url": result["link"],
+        }
+
+        # save the transaction
+        await _db[Collections.transactions].insert_one(transaction.model_dump())
+
+        # update the savings plan
+
+        savings_plan.payment_references.append(transaction.reference)
+
+        await update_record(LockedSavingsPlan, savings_plan.model_dump(), Collections.locked_savings_plans, "uid")
+
+        return api_response

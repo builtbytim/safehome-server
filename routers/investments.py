@@ -184,7 +184,7 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
     filters = {}
 
     if completed:
-        filters["completed"] = True
+        root_filter["completed"] = True
 
     async def filter_for_items_with_correct_owner_club(item,):
 

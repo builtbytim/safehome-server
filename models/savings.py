@@ -3,6 +3,7 @@ from enum import Enum
 from pydantic_settings import SettingsConfigDict
 from libs.utils.pure_functions import *
 from .payments import FundSource
+from .investments import InvestibleAsset
 
 
 class PaymentModes(str, Enum):
@@ -141,10 +142,10 @@ class GoalSavingsPlan(GoalSavingsPlanInput):
     model_config = SettingsConfigDict(populate_by_name=True)
 
 
-class FundGoalSavingsInput(BaseModel):
+class FundSavingsInput(BaseModel):
     amount_to_add: float = Field(gt=0.0, alias="amountToAdd")
     fund_source: FundSource = Field(alias="fundSource")
-    goal_savings_id: str = Field(alias="goalSavingsId")
+    savings_id: str = Field(alias="savingsId")
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
@@ -156,7 +157,7 @@ class LockedSavingsPlanInput(BaseModel):
     payment_mode: PaymentModes = Field(alias="paymentMode")
     fund_source: FundSource = Field(alias="fundSource")
     interval: Intervals = Field(alias="interval")
-    asset_id: str = Field(alias="assetId")
+    asset_uid: str = Field(alias="assetUid")
     lock_duration_in_months: int = Field(
         ge=1, le=6, alias="lockDurationInMonths")
     amount_to_save_at_interval: float = Field(
@@ -180,6 +181,8 @@ class LockedSavingsPlan(LockedSavingsPlanInput):
         default_factory=list, alias="paymentReferences")
     user_id: str = Field(alias="userId")
     wallet_id: str = Field(alias="walletId")
+    asset_info: InvestibleAsset | None = Field(
+        alias="assetInfo", default=None)
     created_at:  float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
     updated_at:  float = Field(

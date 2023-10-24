@@ -385,10 +385,10 @@ class UserBaseModel(BaseModel):
 
 
 class UserUpdateModel(UserBaseModel):
-    address: Union[str, None] = Field(
-        default=None,  min_length=2, max_length=35)
-    country: Union[str, None] = Field(
-        default=None,  min_length=2, max_length=35)
+    residential_address:  str = Field(
+        min_length=10, max_length=100, alias="residentialAddress")
+    state: States = Field(
+        default=None,)
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
@@ -428,6 +428,8 @@ class UserOutputModel(UserBaseModel):
     true_last_login: Union[float, None] = Field(
         alias="trueLastLogin", default=None)
     updated_at: float = Field(default_factory=time, alias="updatedAt")
+    profile_updated_at: float = Field(
+        default_factory=get_utc_timestamp, alias="profileUpdatedAt")
     password_changed_at: float = Field(
         default_factory=get_utc_timestamp, alias="passwordChangedAt")
     password_reset_at: float = Field(
