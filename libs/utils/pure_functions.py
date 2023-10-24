@@ -15,6 +15,11 @@ def get_utc_timestamp() -> float:
     return datetime.now(tz=timezone.utc).timestamp()
 
 
+def get_utc_timestamp_with_zero_hours_mins_secs() -> float:
+    now = datetime.now(tz=timezone.utc)
+    return datetime(now.year, now.month, now.day, 0, 0, 0, 0, tzinfo=timezone.utc).timestamp()
+
+
 def get_uuid4():
     return str(uuid4().hex)
 
