@@ -15,6 +15,8 @@ from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from models.notifications import NotificationTypes
 from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users, only_kyc_verified_users
 from libs.logging import Logger
+from datetime import timedelta
+import math
 
 logger = Logger(f"{__package__}.{__name__}")
 
@@ -50,6 +52,19 @@ async def create_goal_savings_plan(body:  GoalSavingsPlanInput, auth_context:  A
     # create the savings plan
     savings_plan = GoalSavingsPlan(
         **body.model_dump(), user_id=auth_context.user.uid, cycles=calculate_savings_plan_cycles(body.start_date, body.end_date, body.interval), wallet_id=user_wallet.uid)
+
+    # caluclate amount to save on interval
+
+    time_diff_in_seconds = savings_plan.end_date - savings_plan.start_date
+    number_of_intervals = time_diff_in_seconds / \
+        int(IntervalsToSeconds[savings_plan.interval.name].value)
+
+    print(time_diff_in_seconds, number_of_intervals)
+
+    amount_to_save_on_interval = math.ceil(
+        savings_plan.goal_amount / number_of_intervals)
+
+    savings_plan.amount_to_save_at_interval = amount_to_save_on_interval
 
     await _db[Collections.goal_savings_plans].insert_one(savings_plan.model_dump())
 
@@ -202,9 +217,22 @@ async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context
         raise HTTPException(status_code=404,
                             detail="The asset you are trying to lock funds for does not exist.")
 
+    # caluclate amount to save on interval
+    preferred_interval = body.interval
+    amount_to_lock = asset.price / asset.units
+    lock_duration_in_months = body.lock_duration_in_months
+
+    number_of_intervals = timedelta(days=lock_duration_in_months * 30).total_seconds(
+    ) / int(IntervalsToSeconds[preferred_interval.name].value)
+
+    amount_to_save_on_interval = math.ceil(
+        amount_to_lock / number_of_intervals)
+
     # create the savings plan
     savings_plan = LockedSavingsPlan(
         **body.model_dump(), lock_name=asset.asset_name, user_id=auth_context.user.uid, wallet_id=user_wallet.uid)
+
+    savings_plan.amount_to_save_at_interval = amount_to_save_on_interval
 
     await _db[Collections.locked_savings_plans].insert_one(savings_plan.model_dump())
 

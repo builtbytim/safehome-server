@@ -27,6 +27,7 @@ class IntervalsToSeconds(str, Enum):
     yearly = 31536000
 
 
+
 class UserSavingsStats(BaseModel):
     balance: float
     savings_count: int = Field(alias="savingsCount")
