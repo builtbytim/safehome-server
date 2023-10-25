@@ -58,6 +58,7 @@ class Notification(BaseModel):
         alias="readByName", default=None)
     read_by_avatar_url: str | None = Field(
         alias="readByAvatarUrl", default=None)
+    deleted: bool = Field(default=False)
 
     model_config = SettingsConfigDict(populate_by_name=True)
 

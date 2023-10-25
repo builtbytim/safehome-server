@@ -100,7 +100,7 @@ async def update_user(body:  UserUpdateModel, paid_membership_fee: bool = Depend
     updated_user = await update_record(UserDBModel, user.model_dump(), Collections.users, "uid", refresh_from_db=True)
 
     task_create_notification(
-        user.uid, "Profile Updated", f"You updated your profile", NotificationTypes.account)
+        user.uid, NotificationTypes.account, "Profile Updated", f"You updated your profile", )
 
     return updated_user
 
@@ -280,7 +280,7 @@ async def change_password(body:  PasswordChangeInput,  paid_membership_fee: bool
     await _db[Collections.authsessions].update_many({"user_id": user.uid}, {"$set": {"is_valid": False}})
 
     task_create_notification(
-        user.uid, "Password Changed", f"You recently changed your password", NotificationTypes.security)
+        user.uid, NotificationTypes.security, "Password Changed", f"You recently changed your password")
 
     # send email
 
@@ -425,14 +425,14 @@ async def set_next_of_kin(body:  NextOfKinInput,  paid_membership_fee: bool = De
         await _db[Collections.next_of_kins].insert_one(next_of_kin.model_dump())
         # send a notification
         task_create_notification(
-            user.uid, "Next of Kin Added", f"You have added a next of kin", NotificationTypes.account)
+            user.uid, NotificationTypes.account, "Next of Kin Added", f"You added a next of kin", )
         return
 
     if body.replace:
         # send a notification
 
         task_create_notification(
-            user.uid, "Next of Kin Updated", f"You have updated your next of kin", NotificationTypes.account)
+            user.uid, NotificationTypes.account, "Next of Kin Updated", f"You  updated your next of kin")
 
         await _db[Collections.next_of_kins].update_one(
             {"user_id": user.uid}, {"$set": next_of_kin.model_dump()})
@@ -452,7 +452,7 @@ async def set_security_questions(body:  UserSecurityQuestionsInput,  paid_member
         # send a notification
 
         task_create_notification(
-            user.uid, "Security Questions Updated", f"You have updated your security questions", NotificationTypes.account)
+            user.uid,  NotificationTypes.account, "Security Questions Updated", f"You updated your security questions")
 
         user.security_questions = input_data
 
@@ -460,7 +460,7 @@ async def set_security_questions(body:  UserSecurityQuestionsInput,  paid_member
         # send a notification
 
         task_create_notification(
-            user.uid, "Security Questions Added", f"You have added security questions", NotificationTypes.account)
+            user.uid, NotificationTypes.account, "Security Questions Added", f"You have added security questions")
 
         user.security_questions = input_data
 

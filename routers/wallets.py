@@ -393,7 +393,7 @@ async def complete_topup_wallet(req:  Request, ):
         # send a notification
 
         task_create_notification(
-            transaction.initiator, "Added funds successfully", f"Your funding of {transaction.amount} was successful", NotificationTypes.wallet)
+            transaction.initiator,  NotificationTypes.wallet, "Added funds successfully", f"Your funding of {transaction.amount} was successful")
 
         return success_redirect
 

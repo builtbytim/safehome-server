@@ -70,7 +70,7 @@ def task_post_user_registration(user_id:  str):
 # Task to create a notification for a user
 
 @exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
-def task_create_notification(user_id:  str, title:  str, body:  str, notification_type:  NotificationTypes, ):
+def task_create_notification(user_id:  str, notification_type:  NotificationTypes,  title:  str, body:  str, ):
 
     logger.info(
         f"Creating notification of type {notification_type} for user {user_id}")

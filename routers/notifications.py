@@ -29,9 +29,9 @@ async def create_user_notification(body: NotificationInput, auth_context: Authen
 @router.get("/stats", status_code=200, response_model=UserNotificationStats)
 async def get_user_notifications_stats(auth_context: AuthenticationContext = Depends(get_auth_context)):
 
-    unread_count = await _db[Collections.notifications].count_documents({"user_id": auth_context.user.uid, "read": False})
+    unread_count = await _db[Collections.notifications].count_documents({"user_id": auth_context.user.uid, "read": False, "deleted":  False})
 
-    read_count = await _db[Collections.notifications].count_documents({"user_id": auth_context.user.uid, "read": True})
+    read_count = await _db[Collections.notifications].count_documents({"user_id": auth_context.user.uid, "read": True, "deleted":  False})
 
     total_count = unread_count + read_count
 
@@ -39,14 +39,16 @@ async def get_user_notifications_stats(auth_context: AuthenticationContext = Dep
 
 
 @router.get("", status_code=200, response_model=PaginatedResult)
-async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False), type: NotificationTypes = Query(default="all"), auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False),  type: NotificationTypes = Query(default="all"), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     root_filter = {
         "user_id": auth_context.user.uid,
+        "deleted":  False
     }
 
     if type != "all":
         root_filter["notification_type"] = type.value
+        root_filter.pop("deleted")
 
     # match notifiations whose type start with the type query too
 
@@ -66,12 +68,12 @@ async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Qu
 
 @router.get("/mark-all-as-read", status_code=200)
 async def mark_all_user_notifications_as_read(auth_context: AuthenticationContext = Depends(get_auth_context)):
-    await _db[Collections.notifications].update_many({"user_id": auth_context.user.uid, "read": False}, {"$set": {"read": True, "read_at": get_utc_timestamp()}})
+    await _db[Collections.notifications].update_many({"user_id": auth_context.user.uid, "read": False, "deleted":  False}, {"$set": {"read": True, "read_at": get_utc_timestamp()}})
 
 
 @router.get("/clear-all", status_code=200)
 async def clear_all_user_notifications(auth_context: AuthenticationContext = Depends(get_auth_context)):
-    await _db[Collections.notifications].delete_many({"user_id": auth_context.user.uid})
+    await _db[Collections.notifications].update_many({"user_id": auth_context.user.uid, "deleted":  False}, {"$set": {"deleted":  True}})
 
 
 @router.get("/{uid}/mark-as-read", status_code=200)

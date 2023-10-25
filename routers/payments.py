@@ -176,7 +176,7 @@ async def complete_payment(req:  Request, ):
                 return failed_redirect
 
             task_create_notification(
-                the_investment.investor_uid, "Investment Successful", f"Your investment in {asset['asset_name']} was successful", NotificationTypes.investment)
+                the_investment.investor_uid, NotificationTypes.investment, "Investment Successful", f"Your investment in {asset['asset_name']} was successful")
 
         elif transaction.type == TransactionType.savings_add_funds:
 
@@ -204,7 +204,7 @@ async def complete_payment(req:  Request, ):
             await update_record(GoalSavingsPlan, the_savings_plan.model_dump(), Collections.goal_savings_plans, "uid")
 
             task_create_notification(
-                transaction.initiator, "Add Fund to Savings Plan Successful", f"You added funds to savings plan {the_savings_plan.goal_name} ", NotificationTypes.savings)
+                transaction.initiator, NotificationTypes.savings, "Add Fund to Savings Plan Successful", f"You added funds to savings plan {the_savings_plan.goal_name} ")
 
         elif transaction.type == TransactionType.locked_savings_add_funds:
 
@@ -232,7 +232,7 @@ async def complete_payment(req:  Request, ):
             await update_record(LockedSavingsPlan, the_savings_plan.model_dump(), Collections.locked_savings_plans, "uid")
 
             task_create_notification(
-                transaction.initiator, "Add Fund to Locked Savings Plan Successful", f"You added funds to locked savings plan {the_savings_plan.lock_name} ", NotificationTypes.savings)
+                transaction.initiator, NotificationTypes.savings, "Add Fund to Locked Savings Plan Successful", f"You added funds to locked savings plan {the_savings_plan.lock_name} ")
 
         elif transaction.type == TransactionType.membership_fee:
 
@@ -254,7 +254,7 @@ async def complete_payment(req:  Request, ):
             await update_record(UserDBModel, user.model_dump(), Collections.users, "uid", refresh_from_db=True)
 
             task_create_notification(
-                transaction.initiator, "Membership Fee Paid", f"Your membership fee payment was successful", NotificationTypes.account)
+                transaction.initiator, NotificationTypes.account, "Membership Fee Paid", f"Your membership fee payment was successful")
 
         else:
 
@@ -271,7 +271,7 @@ async def complete_payment(req:  Request, ):
             the_wallet.last_transaction_at = get_utc_timestamp()
 
             task_create_notification(
-                transaction.initiator, "Added funds successfully", f"Your funding of {transaction.amount} was successful", NotificationTypes.wallet)
+                transaction.initiator, NotificationTypes.wallet, "Added funds successfully", f"Your funding of {transaction.amount} was successful")
 
             user: UserDBModel = await find_record(UserDBModel, Collections.users, "uid", transaction.initiator, raise_404=False)
 

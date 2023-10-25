@@ -26,7 +26,7 @@ router = APIRouter(responses={
 }, tags=["Investments"], dependencies=[Depends(only_paid_users)])
 
 
-@router.post("/assets", status_code=200, response_model=InvestibleAsset)
+@router.post("/investibles", status_code=200, response_model=InvestibleAsset)
 async def create_investible_asset(body: InvestibleAssetInput, auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
 
     if not user_wallet:
@@ -46,7 +46,7 @@ async def create_investible_asset(body: InvestibleAssetInput, auth_context: Auth
     return InvestibleAsset(**investment.model_dump())
 
 
-@router.get("/assets", status_code=200, response_model=PaginatedResult)
+@router.get("/investibles", status_code=200, response_model=PaginatedResult)
 async def get_investible_assets(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     filters = {
@@ -69,7 +69,7 @@ async def get_investible_assets(page: int = 1, limit: int = 10, owners_club:  Ow
     return await paginator.get_paginated_result(page, InvestibleAsset)
 
 
-@router.get("/assets/{uid}", status_code=200, response_model=InvestibleAsset)
+@router.get("/investibles/{uid}", status_code=200, response_model=InvestibleAsset)
 async def get_investible_asset(uid: str, auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     asset = await _db[Collections.investible_assets].find_one({"uid": uid})
@@ -81,7 +81,7 @@ async def get_investible_asset(uid: str, auth_context: AuthenticationContext = D
     return InvestibleAsset(**asset)
 
 
-@router.post("/assets/invest", status_code=200, response_model=TopupOutput | None)
+@router.post("/investibles/invest", status_code=200, response_model=TopupOutput | None)
 async def create_investment(body: InvestmentInput, kyced: bool = Depends(only_kyc_verified_users), auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
 
     if not user_wallet:
@@ -147,7 +147,7 @@ async def create_investment(body: InvestmentInput, kyced: bool = Depends(only_ky
         investment.is_active = True
 
         task_create_notification(
-            investment.investor_uid, "Investment Successful", f"You invested {transaction.amount} in {asset.asset_name}", NotificationTypes.investment)
+            investment.investor_uid, NotificationTypes.investment, "Investment Successful", f"You invested {transaction.amount} in {asset.asset_name}")
 
         await _db[Collections.investments].insert_one(investment.model_dump())
         await _db[Collections.transactions].insert_one(transaction.model_dump())
@@ -173,7 +173,7 @@ async def create_investment(body: InvestmentInput, kyced: bool = Depends(only_ky
         return api_response
 
 
-@router.get("", status_code=200, response_model=PaginatedResult)
+@router.get("/investments", status_code=200, response_model=PaginatedResult)
 async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), completed: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     root_filter = {
@@ -216,7 +216,7 @@ async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  Owner
     return result
 
 
-@router.get("/stats", status_code=200, response_model=UserInvestmentStats)
+@router.get("/investments/stats", status_code=200, response_model=UserInvestmentStats)
 async def get_user_investment_stats(auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
 
     filters = {
@@ -238,3 +238,60 @@ async def get_user_investment_stats(auth_context: AuthenticationContext = Depend
         total_invested=round(user_wallet.total_amount_invested, 2),
         total_withdrawn=round(user_wallet.total_amount_invested_withdrawn, 2),
     )
+
+
+# fetch investments for a particlar asset uid that belongs to the user
+@router.get("/investibles/{uid}/investments", status_code=200, response_model=PaginatedResult)
+async def get_investments_for_asset(uid: str, page: int = 1, limit: int = 10, auth_context: AuthenticationContext = Depends(get_auth_context), paid_user: bool = Depends(only_paid_users)):
+    root_filter = {
+        "investor_uid": auth_context.user.uid,
+        "asset_uid": uid,
+        "is_active": True
+    }
+
+    filters = {}
+
+    paginator = Paginator(
+        col_name=Collections.investments,
+        root_filter=root_filter,
+        filters=filters,
+        sort_field="created_at",
+        top_down_sort=True,
+        include_crumbs=True,
+        per_page=limit,
+    )
+
+    result = await paginator.get_paginated_result(page, InvestmentWithAsset)
+
+    # get the asset for each investment and set it to the asset info propert of each item in the result
+
+    for item in result.items:
+
+        asset = await _db[Collections.investible_assets].find_one({"uid":  item['assetUid']})
+
+        item['assetInfo'] = InvestibleAsset(
+            **asset).model_dump(by_alias=True)
+
+    return result
+
+
+# fetch one investment
+@router.get("/investments/{uid}", status_code=200, response_model=InvestmentWithAsset)
+async def get_investment(uid: str, auth_context: AuthenticationContext = Depends(get_auth_context), paid_user: bool = Depends(only_paid_users)):
+
+    investment = await _db[Collections.investments].find_one({"uid": uid})
+
+    if not investment:
+        raise HTTPException(status_code=404,
+                            detail="The investment you requested does not exist!")
+
+    if investment["investor_uid"] != auth_context.user.uid:
+        raise HTTPException(status_code=403,
+                            detail="You are not authorized to view this investment!")
+
+    asset = await _db[Collections.investible_assets].find_one({"uid":  investment["asset_uid"]})
+
+    investment["assetInfo"] = InvestibleAsset(
+        **asset).model_dump(by_alias=True)
+
+    return InvestmentWithAsset(**investment)
