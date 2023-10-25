@@ -112,19 +112,19 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
 
     if savings_plan.completed:
         raise HTTPException(status_code=400,
-                            detail="You cannot fund a completed savings plan.")
+                            detail="This savings plan has been completed and cannot be funded.")
 
     if savings_plan.withdrawn:
         raise HTTPException(status_code=400,
-                            detail="You cannot fund a withdrawn savings plan.")
+                            detail="This savings plan has been withdrawn and cannot be funded.")
 
     if savings_plan.amount_saved >= savings_plan.goal_amount:
         raise HTTPException(status_code=400,
                             detail="You have already saved the required amount for this savings plan.")
 
-    if savings_plan.amount_saved + body.amount_to_add > savings_plan.goal_amount:
+    if body.amount_to_add < savings_plan.amount_to_save_at_interval:
         raise HTTPException(status_code=400,
-                            detail="You cannot add more than the required amount to this savings plan.")
+                            detail="You cannot add less than the required amount per interval to this savings plan.")
 
     # create a transaction
     transaction = Transaction(
@@ -334,13 +334,17 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
         raise HTTPException(status_code=400,
                             detail="You cannot fund an already invested savings plan.")
 
+    if savings_plan.ready_for_investment:
+        raise HTTPException(status_code=400,
+                            detail="You cannot fund this savings plan as it is ready to be automatically invested.")
+
     if savings_plan.amount_saved >= (asset.price / asset.units):
         raise HTTPException(status_code=400,
                             detail="You have already saved the required amount for this savings plan.")
 
-    if savings_plan.amount_saved + body.amount_to_add > (asset.price / asset.units):
+    if body.amount_to_add < (asset.price / asset.units):
         raise HTTPException(status_code=400,
-                            detail="You cannot add more than the required amount to this savings plan.")
+                            detail="You cannot add less than the required amount per interval to this savings plan.")
 
     # create a transaction
     transaction = Transaction(
@@ -372,9 +376,9 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
 
         savings_plan.amount_saved += body.amount_to_add
 
-        # if savings_plan.amount_saved >= (asset.price / asset.units):
+        if savings_plan.amount_saved >= (asset.price / asset.units):
 
-        #     savings_plan.completed = True
+            savings_plan.ready_for_investment = True
 
         # update the wallet
 

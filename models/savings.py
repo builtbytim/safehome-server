@@ -27,7 +27,6 @@ class IntervalsToSeconds(str, Enum):
     yearly = 31536000
 
 
-
 class UserSavingsStats(BaseModel):
     balance: float
     savings_count: int = Field(alias="savingsCount")
@@ -165,6 +164,8 @@ class LockedSavingsPlan(LockedSavingsPlanInput):
     is_active: bool = Field(default=True, alias="isActive")
     completed: bool = Field(default=False, alias="completed")
     invested: bool = Field(default=False, alias="invested")
+    ready_for_investment: bool = Field(
+        default=False, alias="readyForInvestment")
     amount_saved: float = Field(ge=0.0, alias="amountSaved", default=0.0)
     payment_references: list[str] = Field(
         default_factory=list, alias="paymentReferences")

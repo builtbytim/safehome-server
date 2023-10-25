@@ -199,6 +199,9 @@ async def complete_payment(req:  Request, ):
 
             the_savings_plan.amount_saved += transaction.amount
 
+            if the_savings_plan.amount_saved >= the_savings_plan.goal_amount:
+                the_savings_plan.completed = True
+
             transaction.balance_after = the_wallet.balance
 
             await update_record(GoalSavingsPlan, the_savings_plan.model_dump(), Collections.goal_savings_plans, "uid")
@@ -225,7 +228,19 @@ async def complete_payment(req:  Request, ):
 
             the_savings_plan = LockedSavingsPlan(**the_savings_plan)
 
+            asset = await _db[Collections.investible_assets].find_one(
+                {"uid": the_savings_plan.asset_uid})
+
+            if not asset:
+                logger.error(
+                    f"Unable to find asset with uid {the_savings_plan.asset_uid}")
+                return failed_redirect
+
             the_savings_plan.amount_saved += transaction.amount
+
+            if the_savings_plan.amount_saved >= (asset['price'] / asset['units']):
+
+                the_savings_plan.ready_for_investment = True
 
             transaction.balance_after = the_wallet.balance
 
