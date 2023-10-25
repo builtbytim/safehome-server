@@ -1,11 +1,9 @@
-from pydantic import BaseModel, Field, EmailStr, validator, constr
+from pydantic import BaseModel, Field, validator
 from pydantic_settings import SettingsConfigDict
 from enum import Enum
 from libs.utils.pure_functions import *
-from time import time
 from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
-import phonenumbers
 
 
 settings = get_settings()
@@ -19,6 +17,12 @@ class FromLastNTime(str, Enum):
     last_1_hour = "1_hour"
     last_15_mins = "15_minutes"
     all_time = "all_time"
+
+
+class CardTypes(str, Enum):
+    VISA = "VISA"
+    MASTERCARD = "MASTERCARD"
+    VERVE = "VERVE"
 
 
 # Wallet for each user's  on-platform wallet
@@ -52,6 +56,60 @@ class Wallet(BaseModel):
     @validator('balance')
     def balance_must_be_2dp(cls, v):
         return round(v, 2)
+
+
+class DebitCardInput(BaseModel):
+    card_number: str = Field(alias="cardNumber", min_length=16, max_length=16)
+    expiry_month: str = Field(alias="expiryMonth", min_length=2, max_length=2)
+    expiry_year: str = Field(alias="expiryYear", min_length=2, max_length=2)
+    cvv: str = Field(alias="cvv", min_length=3, max_length=3)
+    card_type: CardTypes = Field(alias="cardType", )
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+    @validator("card_number")
+    def validate_card_number(cls, v):
+        if not v.isdigit():
+            raise ValueError("Card number must be numeric")
+        return v
+
+    @validator("expiry_month")
+    def validate_expiry_month(cls, v):
+        if not v.isdigit():
+            raise ValueError("Expiry month must be numeric")
+        return v
+
+    @validator("expiry_year")
+    def validate_expiry_year(cls, v):
+        if not v.isdigit():
+            raise ValueError("Expiry year must be numeric")
+        return v
+
+    @validator("cvv")
+    def validate_cvv(cls, v):
+        if not v.isdigit():
+            raise ValueError("CVV must be numeric")
+        return v
+
+
+class DebitCard(BaseModel):
+    card_number: str = Field(alias="cardNumber", )
+    card_name: str | None = Field(alias="cardName", default=None)
+    expiry_month: str = Field(alias="expiryMonth", )
+    expiry_year: str = Field(alias="expiryYear", )
+    cvv: str = Field(alias="cvv",)
+    card_type: str = Field(alias="cardType", )
+    uid: str = Field(default_factory=get_uuid4)
+    user_id: str = Field(alias="userId")
+    wallet: str = Field(alias="wallet")
+    surfix: str = Field(alias="surfix")
+    is_active: bool = Field(default=True, alias="isActive")
+    created_at: float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+    updated_at: float = Field(
+        default_factory=get_utc_timestamp, alias="updatedAt")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
 
 
 class BankAccountInput(BaseModel):
