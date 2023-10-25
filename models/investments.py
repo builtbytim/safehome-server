@@ -102,6 +102,7 @@ class Investment(InvestmentBase):
         alias="investmentExitDate")
     is_active: bool = Field(alias="isActive", default=False)
     completed: bool = False
+    matured: bool = False
     cashed_out: bool = Field(alias="cashedOut", default=False)
     created_at: float = Field(
         default_factory=get_utc_timestamp, alias="createdAt")
