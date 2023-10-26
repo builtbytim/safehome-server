@@ -10,7 +10,7 @@ from models.notifications import NotificationTypes
 from models.wallets import Wallet
 from models.savings import GoalSavingsPlan, FundSource, LockedSavingsPlan
 from libs.utils.pure_functions import *
-from libs.huey_tasks.tasks import task_send_mail, task_create_notification
+from libs.huey_tasks.tasks import task_send_mail, task_create_notification, task_process_referral_code
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
@@ -267,6 +267,10 @@ async def complete_payment(req:  Request, ):
             transaction.balance_after = the_wallet.balance
 
             await update_record(UserDBModel, user.model_dump(), Collections.users, "uid", refresh_from_db=True)
+
+            # process referral code if present
+            if user.referral_code:
+                task_process_referral_code(user.uid, user.referral_code)
 
             task_create_notification(
                 transaction.initiator, NotificationTypes.account, "Membership Fee Paid", f"Your membership fee payment was successful")

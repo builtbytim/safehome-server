@@ -55,6 +55,10 @@ def task_process_referral_code(user_id:  str, referralCode: str):
 
     user = UserDBModel(**user)
 
+    if not user.has_paid_membership_fee:
+        logger.info(f"User {user_id} has not paid membership fee")
+        raise CancelExecution(retry=False)
+
     # get referral profile that has the ref code
 
     referral_profile = db[Collections.referral_profiles].find_one({

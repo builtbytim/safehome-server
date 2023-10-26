@@ -395,7 +395,7 @@ class UserUpdateModel(UserBaseModel):
 
 class UserInputModel(UserBaseModel):
     password: str = Field(min_length=8, max_length=25)
-    referralCode : str | None = None
+    referral_code: str | None = Field(default=None, alias="referralCode")
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
@@ -406,6 +406,7 @@ class UserOutputModel(UserBaseModel):
     kyc_info:  UserKYCInfo | None = Field(default=None, alias="kycInfo")
     security_questions: UserSecurityQuestions | None = Field(
         default=None, alias="securityQuestions")
+    referral_code: str | None = Field(default=None, alias="referralCode")
     address: Union[str, None] = Field(
         default=None,  min_length=2, max_length=256)
     state: Union[str, None] = Field(

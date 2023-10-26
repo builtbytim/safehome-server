@@ -51,9 +51,6 @@ async def user_sign_up(response:  Response, body:  UserInputModel):
 
     task_post_user_registration(user_db.uid)
 
-    if body.referralCode:
-        task_process_referral_code(user_db.uid, body.referralCode)
-
     # create verify email auth code
 
     verify_email_auth_code = AuthCode(

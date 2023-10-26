@@ -69,7 +69,7 @@ async def get_referrals(auth_context: AuthenticationContext = Depends(get_auth_c
     return await paginator.get_paginated_result(page, Referral)
 
 
-@router.post("/withdraw", status_code=200)
+@router.post("/withdraw", status_code=200, response_model=Transaction)
 async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
 
     referral_profile:  UserReferralProfile = await find_record(UserReferralProfile, Collections.referral_profiles, "user_id", auth_context.user.uid)
@@ -82,8 +82,6 @@ async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(
 
     referral_profile.referral_bonus = 0.0
 
-    referral_profile.total_referral_bonus += amount
-
     await _db[Collections.referral_profiles].update_one({"user_id": auth_context.user.uid}, {"$set": referral_profile.model_dump()})
 
     # Send email to applicant
@@ -95,6 +93,8 @@ async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(
         initiator=auth_context.user.uid,
         wallet=user_wallet.uid,
         fund_source=FundSource.na,
+        description=f"Referral bonus deposit of ₦{amount}",
+        balance_after=user_wallet.balance + amount,
         amount=amount, direction=TransactionDirection.incoming, status=TransactionStatus.successful, type=TransactionType.referral_bonus_deposit)
 
     user_wallet.balance += amount
@@ -103,4 +103,4 @@ async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(
 
     await _db[Collections.wallets].update_one({"user_id": auth_context.user.uid}, {"$set": user_wallet.model_dump()})
 
-    return {"message": "Withdrawal request successful!"}
+    return transaction
