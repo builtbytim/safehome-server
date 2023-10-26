@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from models.users import AuthSession
 import jwt
 import base64
+import binascii
 import pyotp
 
 
@@ -28,9 +29,13 @@ def encode_to_base64(input_string):
 # Function to decode a Base64 string to the original string
 
 
-def decode_from_base64(encoded_string):
+def decode_from_base64(encoded_string: str):
     decoded_bytes = base64.b64decode(encoded_string.encode())
-    return decoded_bytes.decode('utf-8')
+    try:
+        decoded_str = decoded_bytes.decode('utf-8', errors='strict')
+    except UnicodeDecodeError:
+        decoded_str = "Error: Invalid UTF-8 data"
+    return decoded_str
 
 
 def _decode_jwt_token(token: str):
@@ -142,6 +147,22 @@ def decrypt(token: bytes) -> bytes:
     f = MultiFernet(Fernet(sha256(x)) for x in keys)
     message = f.decrypt(bytes_token)
     return message
+
+
+def encrypt_string(message: str) -> str:
+
+    cipher_text = encrypt(message.encode())
+
+    hex_encoded = binascii.hexlify(cipher_text).decode()
+
+    return hex_encoded
+
+
+def decrypt_string(hex_encoded: str) -> str:
+
+    cipher_text = binascii.unhexlify(hex_encoded.encode())
+
+    return decrypt(cipher_text).decode()
 
 
 async def generate_totp(action:  ActionIdentifiers, foreign_key: str):

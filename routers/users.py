@@ -10,7 +10,7 @@ from models.notifications import NotificationTypes
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
 from libs.deps.users import get_auth_context, get_auth_code, only_paid_users
 from fastapi.security import OAuth2PasswordRequestForm
-from libs.utils.security import encrypt
+from libs.utils.security import encrypt, encrypt_string
 from libs.cloudinary.uploader import upload_image
 
 

@@ -13,7 +13,8 @@ from models.notifications import NotificationTypes
 from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users, only_kyc_verified_users
 from libs.logging import Logger
 from libs.utils.flutterwave import _initiate_topup_payment, _verify_transaction, _get_supported_banks, _resolve_bank_account, _initiate_withdrawal
-from libs.utils.security import encrypt, decrypt
+from libs.utils.security import encrypt_string
+from libs.utils.pagination import Paginator, PaginatedResult
 
 
 logger = Logger(f"{__package__}.{__name__}")
@@ -32,33 +33,49 @@ async def add_card(body:  DebitCardInput,  paid_membership_fee: bool = Depends(o
     card = DebitCard(
         user_id=auth_context.user.uid,
         wallet=wallet.uid,
-        card_number=encrypt(body.card_number.encode()).hex(),
-        expiry_month=encrypt(body.expiry_month.encode()).hex(),
-        expiry_year=encrypt(body.expiry_year.encode()).hex(),
-        cvv=encrypt(body.cvv.encode()).hex(),
-        card_type=encrypt(body.card_type.encode()).hex(),
+        card_number=encrypt_string(body.card_number),
+        expiry_month=encrypt_string(body.expiry_month),
+        expiry_year=encrypt_string(body.expiry_year),
+        cvv=encrypt_string(body.cvv),
+        card_type=encrypt_string(body.card_type),
         surfix=body.card_number[-4:],
     )
 
-    await _db[Collections.cards].insert_one(card.model_dump())
+    await _db[Collections.debitcards].insert_one(card.model_dump())
 
     return
 
 
-@router.get("/debit-cards", status_code=200, response_model=list[DebitCard])
+@router.get("/debit-cards", status_code=200, response_model=PaginatedResult)
 async def get_cards(auth_context: AuthenticationContext = Depends(get_auth_context),  paid_membership_fee: bool = Depends(only_paid_users), wallet:  Wallet = Depends(get_user_wallet)):
-    cards = await _db[Collections.cards].find({"wallet": wallet.uid}).to_list(100)
 
-    for card in cards:
-        card["card_number"] = decrypt(bytes.fromhex(card["card_number"]))
+    page = 1
+    limit = 100
 
-    return cards
+    root_filter = {
+        "wallet": wallet.uid,
+    }
+
+    filters = {
+    }
+
+    paginator = Paginator(
+        col_name=Collections.debitcards,
+        filters=filters,
+        sort_field="created_at",
+        top_down_sort=True,
+        include_crumbs=True,
+        per_page=limit,
+        root_filter=root_filter,
+    )
+
+    return await paginator.get_paginated_result(page, DecryptedDebitCard)
 
 
 @router.delete("/debit-cards/{card_id}", status_code=200)
 async def delete_card(card_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users), kyc_user: bool = Depends(only_kyc_verified_users)):
 
-    card: DebitCard = await find_record(DebitCard, Collections.cards, "uid", card_id, raise_404=False)
+    card: DebitCard = await find_record(DebitCard, Collections.debitcards, "uid", card_id, raise_404=False)
 
     if not card:
         logger.error(f"Card {card_id} not found")
@@ -77,7 +94,7 @@ async def delete_card(card_id: str, auth_context: AuthenticationContext = Depend
         raise HTTPException(
             status_code=400, detail="Card specified does not belong to your wallet.")
 
-    await _db[Collections.cards].delete_one({"uid": card_id})
+    await _db[Collections.debitcards].delete_one({"uid": card_id})
 
     return
 

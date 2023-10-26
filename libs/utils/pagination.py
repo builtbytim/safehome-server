@@ -50,7 +50,7 @@ class Paginator:
 
     async def get_paginated_result(self, page: int, items_cls=None, exclude_fields=None):
         items = await self.get_page(page)
-        mapped_items = [items_cls(**x).dict(by_alias=True, exclude=exclude_fields)
+        mapped_items = [items_cls(**x).model_dump(by_alias=True, exclude=exclude_fields)
                         for x in items] if items_cls else items
 
         return PaginatedResult(

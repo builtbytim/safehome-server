@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, validator
 from pydantic_settings import SettingsConfigDict
 from enum import Enum
 from libs.utils.pure_functions import *
+from libs.utils.security import decrypt_string
 from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
 
@@ -94,7 +95,7 @@ class DebitCardInput(BaseModel):
 
 class DebitCard(BaseModel):
     card_number: str = Field(alias="cardNumber", )
-    card_name: str | None = Field(alias="cardName", default=None)
+    card_name: str = Field(alias="cardName", default="")
     expiry_month: str = Field(alias="expiryMonth", )
     expiry_year: str = Field(alias="expiryYear", )
     cvv: str = Field(alias="cvv",)
@@ -110,6 +111,36 @@ class DebitCard(BaseModel):
         default_factory=get_utc_timestamp, alias="updatedAt")
 
     model_config = SettingsConfigDict(populate_by_name=True)
+
+
+class DecryptedDebitCard(DebitCard):
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+    # overload model dump to decrypt values when json conversion is needed
+
+    def model_dump(self, *args, **kwargs):
+        temp = super().model_dump(*args, **kwargs)
+
+        if False:
+            temp.update({
+                "card_number": decrypt_string(self.card_number),
+                "expiry_month": decrypt_string(self.expiry_month),
+                "expiry_year": decrypt_string(self.expiry_year),
+                "cvv": decrypt_string(self.cvv)
+            })
+
+        else:
+            temp.update({
+                "cardNumber": decrypt_string(self.card_number),
+                "expiryMonth": decrypt_string(self.expiry_month),
+                "expiryYear": decrypt_string(self.expiry_year),
+                "cvv": decrypt_string(self.cvv),
+                "cardType": decrypt_string(self.card_type),
+
+            })
+
+        return temp
 
 
 class BankAccountInput(BaseModel):

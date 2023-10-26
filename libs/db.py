@@ -25,7 +25,7 @@ class Collections(str, Enum):
     notifications = "notifications"
     goal_savings_plans = "goal_savings_plans"
     locked_savings_plans = "locked_savings_plans"
-    cards = "cards"
+    debitcards = "debitcards"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)
