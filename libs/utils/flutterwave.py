@@ -1,4 +1,5 @@
 from models.payments import Transaction
+from fastapi import HTTPException
 from models.users import AuthenticationContext
 from libs.config.settings import get_settings
 from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
@@ -12,203 +13,255 @@ settings = get_settings()
 
 
 def _resolve_bank_account(bank_code: str, account_number: str):
-    url = make_url(
-        f"{Endpoints.flutterwave_resolve_bank_account.value}")
 
-    body = {
-        "account_number": account_number,
-        "account_bank": bank_code,
-    }
+    try:
 
-    # temp fix
-    return {
-        "account_number": "0690000032",
-        "account_name": "Pastor Bright"
-    }
+        url = make_url(
+            f"{Endpoints.flutterwave_resolve_bank_account.value}")
 
-    ok, status, data = make_req(
-        url, "POST", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"}, body=body)
+        body = {
+            "account_number": account_number,
+            "account_bank": bank_code,
+        }
 
-    if str(status) == "400":
-        raise HTTPException(
-            status_code=400, detail="Invalid bank account")
+        # temp fix
+        return {
+            "account_number": "0690000032",
+            "account_name": "Pastor Bright"
+        }
 
-    success = handle_response(ok, status, data)
+        ok, status, data = make_req(
+            url, "POST", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"}, body=body)
 
-    if not success:
+        if str(status) == "400":
+            raise HTTPException(
+                status_code=400, detail="Invalid bank account")
+
+        success = handle_response(ok, status, data)
+
+        if not success:
+            logger.error(
+                f"Unable to resolve bank account {account_number} due to {ok} {status} {data} ")
+            raise HTTPException(
+                status_code=500, detail="Unable to resolve bank account")
+
+        result = data["data"]
+
+        return result
+
+    except Exception as e:
         logger.error(
-            f"Unable to resolve bank account {account_number} due to {ok} {status} {data} ")
+            f"Unable to resolve bank account {account_number} due to {e} ")
         raise HTTPException(
             status_code=500, detail="Unable to resolve bank account")
-
-    result = data["data"]
-
-    return result
 
 
 def _get_supported_banks(country: str = "NG"):
 
-    url = make_url(
-        f"{Endpoints.flutterwave_get_banks.value}/{country}")
+    try:
 
-    ok, status, data = make_req(
-        url, "GET", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"})
+        url = make_url(
+            f"{Endpoints.flutterwave_get_banks.value}/{country}")
 
-    success = handle_response(ok, status, data)
+        ok, status, data = make_req(
+            url, "GET", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"})
 
-    if not success:
+        success = handle_response(ok, status, data)
+
+        if not success:
+            logger.error(
+                f"Unable to get supported banks for country {country} due to {ok} {status}  ")
+            raise HTTPException(
+                status_code=500, detail="Unable to get supported banks")
+
+        result = data["data"]
+
+        return result
+
+    except Exception as e:
         logger.error(
-            f"Unable to get supported banks for country {country} due to {ok} {status}  ")
+            f"Unable to get supported banks for country {country} due to {e}  ")
         raise HTTPException(
             status_code=500, detail="Unable to get supported banks")
-
-    result = data["data"]
-
-    return result
 
 
 def _verify_transaction(tx_id: str, user_id: str):
 
-    url = make_url(
-        f"{Endpoints.flutterwave_tx_verification.value}/{tx_id}/verify")
+    try:
 
-    ok, status, data = make_req(
-        url, "GET", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"})
+        url = make_url(
+            f"{Endpoints.flutterwave_tx_verification.value}/{tx_id}/verify")
 
-    success = handle_response(ok, status, data)
+        ok, status, data = make_req(
+            url, "GET", headers={"Authorization": f"Bearer {settings.flutterwave_secret_key}"})
 
-    if not success:
+        success = handle_response(ok, status, data)
+
+        if not success:
+            logger.error(
+                f"Unable to verify transaction {tx_id} for user {user_id} due to {ok} {status} {data} ")
+            raise HTTPException(
+                status_code=500, detail="Unable to verify transaction")
+
+        result = data["data"]
+
+        return result
+
+    except Exception as e:
         logger.error(
-            f"Unable to verify transaction {tx_id} for user {user_id} due to {ok} {status} {data} ")
+            f"Unable to verify transaction {tx_id} for user {user_id} due to {e} ")
         raise HTTPException(
             status_code=500, detail="Unable to verify transaction")
 
-    result = data["data"]
-
-    return result
-
 
 def _initiate_payment(transaction: Transaction, auth_context: AuthenticationContext, customizations: dict = {}):
-    # initiate the transaction on flutterwave
 
-    payment_payload = {
+    try:
 
-        "tx_ref": transaction.reference,
-        "amount": transaction.amount,
-        "currency": transaction.currency,
-        "redirect_url": f"{settings.server_url}/payments/complete",
-        "customer": {
-            "email": auth_context.user.email,
-        },
+        # initiate the transaction on flutterwave
 
-        "customizations": customizations,
+        payment_payload = {
 
-    }
+            "tx_ref": transaction.reference,
+            "amount": transaction.amount,
+            "currency": transaction.currency,
+            "redirect_url": f"{settings.server_url}/payments/complete",
+            "customer": {
+                "email": auth_context.user.email,
+            },
 
-    url = make_url(Endpoints.flutterwave_payments.value)
+            "customizations": customizations,
 
-    headers = {
-        "Authorization": f"Bearer {settings.flutterwave_secret_key}",
-    }
+        }
 
-    ok, status, data = make_req(
-        url, "POST", headers=headers, body=payment_payload)
+        url = make_url(Endpoints.flutterwave_payments.value)
 
-    success = handle_response(ok, status, data)
+        headers = {
+            "Authorization": f"Bearer {settings.flutterwave_secret_key}",
+        }
 
-    if not success:
+        ok, status, data = make_req(
+            url, "POST", headers=headers, body=payment_payload)
+
+        success = handle_response(ok, status, data)
+
+        if not success:
+            logger.error(
+                f"Unable to initiate payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+            raise HTTPException(
+                status_code=500, detail="Unable to initiate payment")
+
+        result = data["data"]
+
+        return result
+
+    except Exception as e:
         logger.error(
-            f"Unable to initiate payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+            f"Unable to initiate payment for user {auth_context.user.uid} due to {e} ")
         raise HTTPException(
             status_code=500, detail="Unable to initiate payment")
-
-    result = data["data"]
-
-    return result
 
 
 def _initiate_topup_payment(transaction: Transaction, auth_context: AuthenticationContext):
-    # initiate the transaction on flutterwave
 
-    payment_payload = {
+    try:
 
-        "tx_ref": transaction.reference,
-        "amount": transaction.amount,
-        "currency": transaction.currency,
-        "redirect_url": f"{settings.server_url}/wallet/top-up/complete",
-        "customer": {
-            "email": auth_context.user.email,
-        },
+        # initiate the transaction on flutterwave
 
-        "customizations": {
-            "title": "SafeHome",
-            "description": "Top Up your SafeHome",
-        },
+        payment_payload = {
 
-    }
+            "tx_ref": transaction.reference,
+            "amount": transaction.amount,
+            "currency": transaction.currency,
+            "redirect_url": f"{settings.server_url}/wallet/top-up/complete",
+            "customer": {
+                "email": auth_context.user.email,
+            },
 
-    url = make_url(Endpoints.flutterwave_payments.value)
+            "customizations": {
+                "title": "SafeHome",
+                "description": "Top Up your SafeHome",
+            },
 
-    headers = {
-        "Authorization": f"Bearer {settings.flutterwave_secret_key}",
-    }
+        }
 
-    ok, status, data = make_req(
-        url, "POST", headers=headers, body=payment_payload)
+        url = make_url(Endpoints.flutterwave_payments.value)
 
-    success = handle_response(ok, status, data)
+        headers = {
+            "Authorization": f"Bearer {settings.flutterwave_secret_key}",
+        }
 
-    if not success:
+        ok, status, data = make_req(
+            url, "POST", headers=headers, body=payment_payload)
+
+        success = handle_response(ok, status, data)
+
+        if not success:
+            logger.error(
+                f"Unable to initiate top-up payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+            raise HTTPException(
+                status_code=500, detail="Unable to initiate payment")
+
+        result = data["data"]
+
+        return result
+
+    except Exception as e:
         logger.error(
-            f"Unable to initiate top-up payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+            f"Unable to initiate top-up payment for user {auth_context.user.uid} due to {e} ")
         raise HTTPException(
             status_code=500, detail="Unable to initiate payment")
-
-    result = data["data"]
-
-    return result
 
 
 def _initiate_withdrawal(transaction: Transaction, auth_context: AuthenticationContext, bank_account: BankAccount):
-    # initiate the transaction on flutterwave
 
-    payment_payload = {
+    try:
 
-        "reference": transaction.reference,
-        "amount": transaction.amount,
-        "debit_currency": transaction.currency,
-        "account_bank": bank_account.bank_code,
-        "account_number": bank_account.account_number,
-        "narration": f"{transaction.description}",
-        "callback_url": f"{settings.server_url}/wallet/withdrawal/complete",
-        "customer": {
-            "email": auth_context.user.email,
-        },
+        # initiate the transaction on flutterwave
 
-        "customizations": {
-            "title": "SafeHome",
-            "description": "Complete your Withdrawal from SafeHome",
-        },
+        payment_payload = {
 
-    }
+            "reference": transaction.reference,
+            "amount": transaction.amount,
+            "debit_currency": transaction.currency,
+            "account_bank": bank_account.bank_code,
+            "account_number": bank_account.account_number,
+            "narration": f"{transaction.description}",
+            "callback_url": f"{settings.server_url}/wallet/withdrawal/complete",
+            "customer": {
+                "email": auth_context.user.email,
+            },
 
-    url = make_url(Endpoints.flutterwave_transfers.value)
+            "customizations": {
+                "title": "SafeHome",
+                "description": "Complete your Withdrawal from SafeHome",
+            },
 
-    headers = {
-        "Authorization": f"Bearer {settings.flutterwave_secret_key}",
-    }
+        }
 
-    ok, status, data = make_req(
-        url, "POST", headers=headers, body=payment_payload)
+        url = make_url(Endpoints.flutterwave_transfers.value)
 
-    success = handle_response(ok, status, data)
+        headers = {
+            "Authorization": f"Bearer {settings.flutterwave_secret_key}",
+        }
 
-    if not success:
+        ok, status, data = make_req(
+            url, "POST", headers=headers, body=payment_payload)
+
+        success = handle_response(ok, status, data)
+
+        if not success:
+            logger.error(
+                f"Unable to initiate withdrawal payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+            raise HTTPException(
+                status_code=500, detail="Unable to initiate payment")
+
+        result = data["data"]
+
+        return result
+
+    except Exception as e:
         logger.error(
-            f"Unable to initiate withdrawal payment for user {auth_context.user.uid} due to {ok} {status} {data} ")
+            f"Unable to initiate withdrawal payment for user {auth_context.user.uid} due to {e} ")
         raise HTTPException(
             status_code=500, detail="Unable to initiate payment")
-
-    result = data["data"]
-
-    return result
