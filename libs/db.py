@@ -26,6 +26,8 @@ class Collections(str, Enum):
     goal_savings_plans = "goal_savings_plans"
     locked_savings_plans = "locked_savings_plans"
     debitcards = "debitcards"
+    referral_profiles = "referral_profiles"
+    referrals = "referrals"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)

@@ -7,6 +7,7 @@ from .payments import router as payments_router
 from .wallets import router as wallets_router
 from .investments import router as investments_router
 from .savings import router as savings_router
+from .referrals import router as referrals_router
 
 
 router = APIRouter()
@@ -24,4 +25,5 @@ router.include_router(uploads_router, prefix="/uploads")
 router.include_router(payments_router, prefix="/payments")
 router.include_router(investments_router, prefix="")
 router.include_router(savings_router, prefix="/savings")
+router.include_router(referrals_router, prefix="/refer")
 router.include_router(miscellaneous_router, prefix="/misc")

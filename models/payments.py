@@ -16,6 +16,7 @@ class FundSource(str, Enum):
     bank_account = "bank"
     card = "card"
     bank = "bank"
+    na = "na"
 
 
 class TransactionStatus(str, Enum):
@@ -34,6 +35,7 @@ class TransactionType(str, Enum):
     savings = "savings"
     savings_add_funds = "savings_add_funds"
     locked_savings_add_funds = "locked_savings_add_funds"
+    referral_bonus_deposit = "referral_bonus_deposit"
 
 
 class TransactionDirection(str, Enum):
