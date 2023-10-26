@@ -49,11 +49,19 @@ async def get_referral_profile(auth_context: AuthenticationContext = Depends(get
 
 
 @router.get("/referrals", status_code=200, response_model=PaginatedResult)
-async def get_referrals(auth_context: AuthenticationContext = Depends(get_auth_context), page: int = Query(default=1), limit: int = Query(default=20)):
+async def get_referrals(auth_context: AuthenticationContext = Depends(get_auth_context), page: int = Query(default=1), limit: int = Query(default=20), search: str = Query(default="")):
 
     root_filter = {"referred_by": auth_context.user.uid}
 
     filters = {}
+
+    if search:
+
+        filters.update({"$or": [
+            {"referred_user_name": {"$regex": search, "$options": "i"}},
+            {"referred_user_email": {"$regex": search, "$options": "i"}},
+            {"referred_user_id": {"$regex": search, "$options": "i"}},
+        ]})
 
     paginator = Paginator(Collections.referrals, "created_at",
                           True, limit, filters, root_filter=root_filter)

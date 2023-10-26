@@ -5,6 +5,7 @@ from libs.config.settings import get_settings
 from libs.logging import Logger
 from libs.db import Collections
 from models.wallets import Wallet
+from models.referrals import Referral, UserReferralProfile
 from huey.exceptions import CancelExecution
 from huey import crontab
 from models.notifications import Notification, NotificationTypes
@@ -38,6 +39,74 @@ def task_test_huey():
 
     db["huey_test"].insert_one({"ts": get_utc_timestamp()})
     return
+
+
+# Task to process referral code
+@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+def task_process_referral_code(user_id:  str, referralCode: str):
+
+    # get user
+
+    user = db[Collections.users].find_one({"uid": user_id})
+
+    if not user:
+        logger.critical(f"User {user_id} does not exist")
+        raise CancelExecution(retry=False)
+
+    user = UserDBModel(**user)
+
+    # get referral profile that has the ref code
+
+    referral_profile = db[Collections.referral_profiles].find_one({
+        "referral_code": referralCode
+    })
+
+    if not referral_profile:
+        logger.info(f"Referral code {referralCode} does not exist")
+        raise CancelExecution(retry=False)
+
+    referral_profile = UserReferralProfile(**referral_profile)
+
+    # check if the user has already been referred
+
+    referral = db[Collections.referrals].find_one({
+        "referred_user_id": user_id
+    })
+
+    if referral:
+        logger.info(f"User {user_id} has already been referred")
+        raise CancelExecution(retry=False)
+
+    # check if the user  referred themselves
+
+    if referral_profile.user_id == user_id:
+
+        logger.info(f"User {user_id} has referred themselves")
+        raise CancelExecution(retry=False)
+
+    # create a referral
+
+    referral = Referral(
+        referred_by=referral_profile.user_id,
+        referred_user_id=user_id,
+        referred_user_email=user.email,
+        referred_user_name=user.get_full_name(),
+        referral_code=referral_profile.referral_code,
+        referral_link=referral_profile.referral_link,
+        referral_bonus=settings.referral_bonus,
+        confirmed=True
+    )
+
+    db[Collections.referrals].insert_one(referral.model_dump())
+
+    # update the referral profile
+
+    referral_profile.referral_count += 1
+    referral_profile.referral_bonus += settings.referral_bonus
+    referral_profile.total_referral_bonus += settings.referral_bonus
+
+    db[Collections.referral_profiles].update_one(
+        {"user_id": referral_profile.user_id}, {"$set": referral_profile.model_dump()})
 
 
 # Task to execute  additional actions after a successful user registration

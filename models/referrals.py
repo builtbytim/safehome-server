@@ -2,8 +2,6 @@ from pydantic import BaseModel, Field, EmailStr, validator, constr
 from enum import Enum
 from typing import Union
 from libs.utils.pure_functions import *
-from libs.db import _db, Collections
-from time import time
 from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
 import random
@@ -40,11 +38,11 @@ class UserReferralProfile(BaseModel):
 class Referral(BaseModel):
     referred_by:  str = Field(min_length=8, alias="referredBy")
     referred_user_id:  str = Field(min_length=8, alias="referredUserId")
-    referred_user_email:  str = Field(
-        min_length=8, alias="referredUserEmail")
+    referred_user_email:  EmailStr = Field(
+        alias="referredUserEmail")
     referred_user_name:  str = Field(
-        min_length=8, alias="referredUserName")
-    referral_code:  str = Field(min_length=8, alias="referralCode")
+        min_length=3, alias="referredUserName")
+    referral_code:  str = Field(min_length=4, alias="referralCode")
     referral_link:  str = Field(min_length=8, alias="referralLink")
     confirmed:  bool = Field(default=False)
     referral_bonus:  float = Field(default=0.0, alias="referralBonus")

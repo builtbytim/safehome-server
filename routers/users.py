@@ -5,7 +5,7 @@ from libs.db import _db, Collections
 from libs.utils.pure_functions import *
 from libs.utils.security import scrypt_hash
 from libs.utils.api_helpers import update_record, find_record, _validate_email_from_db, _validate_phone_from_db
-from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification, task_post_user_registration, task_create_notification
+from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification, task_post_user_registration, task_create_notification, task_process_referral_code
 from models.notifications import NotificationTypes
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
 from libs.deps.users import get_auth_context, get_auth_code, only_paid_users
@@ -50,6 +50,9 @@ async def user_sign_up(response:  Response, body:  UserInputModel):
     # Queue additinonal tasks
 
     task_post_user_registration(user_db.uid)
+
+    if body.referralCode:
+        task_process_referral_code(user_db.uid, body.referralCode)
 
     # create verify email auth code
 

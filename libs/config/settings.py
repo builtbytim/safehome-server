@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     flutterwave_encryption_key: str = "flutterwaveencryptionkey"
     verifyme_secret_key: str = "verifymesecretkey"
     referral_withdrawal_threshold: float = 5000
+    referral_bonus: float = 2000
     kek: str = "kek"
     kek1: str = "kek1"
     kek2: str = "kek2"

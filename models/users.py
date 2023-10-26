@@ -395,6 +395,7 @@ class UserUpdateModel(UserBaseModel):
 
 class UserInputModel(UserBaseModel):
     password: str = Field(min_length=8, max_length=25)
+    referralCode : str | None = None
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
@@ -434,6 +435,9 @@ class UserOutputModel(UserBaseModel):
         default_factory=get_utc_timestamp, alias="passwordChangedAt")
     password_reset_at: float = Field(
         default_factory=get_utc_timestamp, alias="passwordResetAt")
+
+    def get_full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
 
     @validator('phone')
     def validate_phone(v):
