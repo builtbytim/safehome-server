@@ -59,12 +59,13 @@ async def create_goal_savings_plan(body:  GoalSavingsPlanInput, auth_context:  A
     number_of_intervals = time_diff_in_seconds / \
         int(IntervalsToSeconds[savings_plan.interval.name].value)
 
-    print(time_diff_in_seconds, number_of_intervals)
-
-    amount_to_save_on_interval = math.ceil(
+    suggested_amount_to_save_on_interval = math.ceil(
         savings_plan.goal_amount / number_of_intervals)
 
-    savings_plan.amount_to_save_at_interval = amount_to_save_on_interval
+    if body.amount_to_save_at_interval < (suggested_amount_to_save_on_interval/2):
+        raise HTTPException(400, "Amount to add on interval basis is too low.")
+
+    savings_plan.amount_to_save_at_interval = body.amount_to_save_at_interval
 
     await _db[Collections.goal_savings_plans].insert_one(savings_plan.model_dump())
 
@@ -342,7 +343,7 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
         raise HTTPException(status_code=400,
                             detail="You have already saved the required amount for this savings plan.")
 
-    if body.amount_to_add < (asset.price / asset.units):
+    if body.amount_to_add < savings_plan.amount_to_save_at_interval:
         raise HTTPException(status_code=400,
                             detail="You cannot add less than the required amount per interval to this savings plan.")
 

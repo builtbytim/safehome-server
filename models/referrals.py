@@ -1,6 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr, validator, constr
-from enum import Enum
-from typing import Union
+from pydantic import BaseModel, Field, EmailStr
 from libs.utils.pure_functions import *
 from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
@@ -21,7 +19,6 @@ class UserReferralProfile(BaseModel):
     user_id:  str = Field(min_length=8, alias="userId")
     referral_code:  str = Field(
         min_length=6, alias="referralCode")
-    referral_link:  str = Field(min_length=8, alias="referralLink")
     referral_count:  int = Field(default=0, alias="referralCount")
     referral_bonus:  float = Field(default=0.0, alias="referralBonus")
     is_active:  bool = Field(default=True, alias="isActive")
@@ -33,6 +30,30 @@ class UserReferralProfile(BaseModel):
         default_factory=get_utc_timestamp, alias="updatedAt")
 
     model_config = SettingsConfigDict(populate_by_name=True)
+
+    @property
+    def referral_link(self):
+        return f"{settings.app_url}/r/{self.referral_code}"
+
+    def model_dump(self, by_alias=False, *args, **kwargs):
+
+        temp = super().model_dump(by_alias=by_alias, *args, **kwargs)
+
+        if by_alias:
+            temp.update({
+                "referralLink":  self.referral_link
+            })
+
+        else:
+            temp.update({
+                "referral_link":  self.referral_link
+            })
+
+        return temp
+
+
+class UserReferralProfileOutput(UserReferralProfile):
+    referral_link:  str = Field(alias="referralLink")
 
 
 class Referral(BaseModel):

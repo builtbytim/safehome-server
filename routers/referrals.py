@@ -23,7 +23,7 @@ router = APIRouter(responses={
 }, tags=["Referrals"], dependencies=[Depends(get_auth_context), Depends(only_kyc_verified_users), Depends(only_paid_users)])
 
 
-@router.get("/profile", status_code=200, response_model=UserReferralProfile)
+@router.get("/profile", status_code=200, response_model=UserReferralProfileOutput)
 async def get_referral_profile(auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     referral_profile = await find_record(UserReferralProfile, Collections.referral_profiles, "user_id", auth_context.user.uid, raise_404=False)
@@ -38,14 +38,12 @@ async def get_referral_profile(auth_context: AuthenticationContext = Depends(get
         while await find_record(UserReferralProfile, Collections.referral_profiles, "referral_code", referral_code, raise_404=False):
             referral_code = generate_referral_code()
 
-        referral_link = f"{settings.app_url}/r/{referral_code}"
-
         referral_profile = UserReferralProfile(
-            user_id=auth_context.user.uid, referral_code=referral_code, referral_link=referral_link)
+            user_id=auth_context.user.uid, referral_code=referral_code)
 
         await _db[Collections.referral_profiles].insert_one(referral_profile.model_dump())
 
-    return referral_profile
+    return referral_profile.model_dump(by_alias=True)
 
 
 @router.get("/referrals", status_code=200, response_model=PaginatedResult)
