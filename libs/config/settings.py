@@ -61,7 +61,7 @@ class Settings(BaseSettings):
 
     allowed_origins: list[str] = [
         "https://safehomecoop.com", "https://www.safehomecoop.com", "https://app.safehomecoop.com",
-        "http://localhost:3000", "http://localhost:3001", "https://safehome-gg.vercel.app", "https://app.safehome.timmypelumy.dev", "https://safehome.timmypelumy.dev"]
+        "http://localhost:3000", "http://0.0.0.0:3000", "http://localhost:3001", "https://safehome-gg.vercel.app", "https://app.safehome.timmypelumy.dev", "https://safehome.timmypelumy.dev"]
 
 
 @lru_cache()

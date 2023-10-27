@@ -52,8 +52,23 @@ class UserReferralProfile(BaseModel):
         return temp
 
 
-class UserReferralProfileOutput(UserReferralProfile):
+class UserReferralProfileOutput(BaseModel):
+    user_id:  str = Field(min_length=8, alias="userId")
+    referral_code:  str = Field(
+        min_length=6, alias="referralCode")
+    referral_count:  int = Field(default=0, alias="referralCount")
+    referral_bonus:  float = Field(default=0.0, alias="referralBonus")
+    is_active:  bool = Field(default=True, alias="isActive")
+    total_referral_bonus:  float = Field(
+        default=0.0, alias="totalReferralBonus")
+    created_at:  float = Field(
+        default_factory=get_utc_timestamp, alias="createdAt")
+    updated_at:  float = Field(
+        default_factory=get_utc_timestamp, alias="updatedAt")
+
     referral_link:  str = Field(alias="referralLink")
+
+    model_config = SettingsConfigDict(populate_by_name=True)
 
 
 class Referral(BaseModel):
