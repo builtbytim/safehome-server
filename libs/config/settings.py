@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     default_currency: str = "NGN"
     debug: bool = True
     app_url: str = "http://localhost:3000"
+    landing_page_url: str = "http://localhost:3000"
     server_url: str = "http://localhost:7000/api/v1"
     log_level: str = "DEBUG"
     app_name: str = "Safehome"

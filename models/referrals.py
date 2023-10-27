@@ -33,7 +33,7 @@ class UserReferralProfile(BaseModel):
 
     @property
     def referral_link(self):
-        return f"{settings.app_url}/r/{self.referral_code}"
+        return f"{settings.landing_page_url}/r/{self.referral_code}"
 
     def model_dump(self, by_alias=False, *args, **kwargs):
 
