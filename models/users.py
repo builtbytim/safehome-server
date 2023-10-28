@@ -395,7 +395,7 @@ class UserUpdateModel(UserBaseModel):
 class UserInputModel(UserBaseModel):
     password: str = Field(min_length=8, max_length=25)
     referral_code: str | None = Field(default=None, alias="referralCode")
-    as_affiliate:  bool = Field(default=False, alias="asAffiliate")
+    affiliate_code: str | None = Field(default=None, alias="affiliateCode")
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
@@ -407,6 +407,7 @@ class UserOutputModel(UserBaseModel):
     security_questions: UserSecurityQuestions | None = Field(
         default=None, alias="securityQuestions")
     referral_code: str | None = Field(default=None, alias="referralCode")
+    affiliate_code: str | None = Field(default=None, alias="affiliateCode")
     address: Union[str, None] = Field(
         default=None,  min_length=2, max_length=256)
     state: Union[str, None] = Field(

@@ -44,9 +44,6 @@ async def user_sign_up(response:  Response, body:  UserInputModel):
         **user_dict, uid=prospective_id, password_hash=password_hash
     )
 
-    if body.as_affiliate:
-        user_db.role = UserRoles.AFFILIATE
-
     # save into data base
     await _db[Collections.users].insert_one(user_db.model_dump())
 

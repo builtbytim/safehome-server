@@ -6,6 +6,7 @@ from libs.logging import Logger
 from libs.db import Collections
 from models.wallets import Wallet
 from models.referrals import Referral, UserReferralProfile
+from models.affiliates import AffiliateLevel, AffiliateReferralCodeOutput, AffiliateProfile, AffiliateProfileOutput, AffiliateReferral, AffiliateReferralCode
 from huey.exceptions import CancelExecution
 from huey import crontab
 from models.notifications import Notification, NotificationTypes
@@ -39,6 +40,79 @@ def task_test_huey():
 
     db["huey_test"].insert_one({"ts": get_utc_timestamp()})
     return
+
+
+# Task to process affiliate code
+@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+def task_process_affiliate_code(user_id:  str, affiliate_code: str):
+
+    # get user
+
+    user = db[Collections.users].find_one({"uid": user_id})
+
+    if not user:
+        logger.critical(f"User {user_id} does not exist")
+        raise CancelExecution(retry=False)
+
+    user = UserDBModel(**user)
+
+    if not user.has_paid_membership_fee:
+        logger.info(f"User {user_id} has not paid membership fee")
+        raise CancelExecution(retry=False)
+
+    # get affiliate profile that has the ref code
+
+    affiliate_profile = db[Collections.affiliate_profiles].find_one({
+        "referral_code": affiliate_code
+    })
+
+    if not affiliate_profile:
+        logger.info(f"Affiliate code {affiliate_code} does not exist")
+        raise CancelExecution(retry=False)
+
+    affiliate_profile = UserReferralProfile(**affiliate_profile)
+
+    # check if the user has already been referred
+
+    affiliate_referral = db[Collections.affiliate_referrals].find_one({
+        "referred_user_id": user_id
+    })
+
+    if affiliate_referral:
+        logger.info(f"User {user_id} has already been referred")
+        raise CancelExecution(retry=False)
+
+    # check if the user  referred themselves
+
+    if affiliate_profile.user_id == user_id:
+
+        logger.info(f"User {user_id} has referred themselves")
+        raise CancelExecution(retry=False)
+
+    # create a referral
+
+    affiliate_referral = AffiliateReferral(
+        referred_by=affiliate_profile.user_id,
+        referred_user_id=user_id,
+        referred_user_email=user.email,
+        referred_user_name=user.get_full_name(),
+        referral_code=affiliate_profile.referral_code,
+        referral_link=affiliate_profile.referral_link,
+        referral_bonus=settings.affiliate_bonus,
+        confirmed=True
+    )
+
+    db[Collections.affiliate_referrals].insert_one(
+        affiliate_referral.model_dump())
+
+    # update the referral profile
+
+    affiliate_profile.referral_count += 1
+    affiliate_profile.referral_bonus += settings.affiliate_bonus
+    affiliate_profile.total_referral_bonus += settings.affiliate_bonus
+
+    db[Collections.affiliate_profiles].update_one(
+        {"user_id": affiliate_profile.user_id}, {"$set": affiliate_profile.model_dump()})
 
 
 # Task to process referral code
