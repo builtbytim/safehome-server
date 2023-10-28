@@ -16,6 +16,7 @@ def generate_referral_code(length=6):
 
 
 class UserReferralProfile(BaseModel):
+    uid:  str = Field(min_length=8, default_factory=get_uuid4)
     user_id:  str = Field(min_length=8, alias="userId")
     referral_code:  str = Field(
         min_length=6, alias="referralCode")
@@ -72,6 +73,7 @@ class UserReferralProfileOutput(BaseModel):
 
 
 class Referral(BaseModel):
+    uid:  str = Field(min_length=8, default_factory=get_uuid4)
     referred_by:  str = Field(min_length=8, alias="referredBy")
     referred_user_id:  str = Field(min_length=8, alias="referredUserId")
     referred_user_email:  EmailStr = Field(

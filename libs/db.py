@@ -28,6 +28,8 @@ class Collections(str, Enum):
     debitcards = "debitcards"
     referral_profiles = "referral_profiles"
     referrals = "referrals"
+    affiliate_profiles = "affiliate_profiles"
+    affiliate_referrals = "affiliate_referrals"
 
 
 client = motor_asyncio.AsyncIOMotorClient(settings.db_url)

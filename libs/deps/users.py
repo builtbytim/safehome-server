@@ -4,7 +4,7 @@ from pydantic import EmailStr
 from libs.db import _db, Collections
 from libs.utils.api_helpers import update_record
 from libs.config.settings import get_settings
-from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode, USER_EXLUCUDE_FIELDS, UserOutputModel, KYCStatus
+from models.users import AuthenticationContext,  RequestAccountConfirmationInput, UserDBModel, AuthSession, AuthCode, UserRoles, USER_EXLUCUDE_FIELDS, UserOutputModel, KYCStatus
 from models.wallets import Wallet
 from libs.utils.security import _decode_jwt_token
 from datetime import datetime, timezone, timedelta
@@ -113,6 +113,14 @@ async def get_user_wallet(context: AuthenticationContext = Depends(get_auth_cont
         return w
 
     return None
+
+
+async def only_affiliates(context:  AuthenticationContext = Depends(get_auth_context)):
+    if context.user.role != UserRoles.AFFILIATE:
+        raise HTTPException(
+            status_code=400, detail="You must be an affiliate to perform this action.")
+
+    return True
 
 
 async def only_kyc_verified_users(context: AuthenticationContext | None = Depends(get_auth_context_optionally)):

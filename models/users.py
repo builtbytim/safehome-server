@@ -76,8 +76,7 @@ class States(str, Enum):
 class UserRoles(str, Enum):
     ADMIN = "ADMIN"
     USER = "USER"
-    GUEST = "GUEST"
-    NONE = "NONE"
+    AFFILIATE = "AFFILIATE"
 
 
 class KYCDocumentType(str, Enum):
@@ -396,6 +395,7 @@ class UserUpdateModel(UserBaseModel):
 class UserInputModel(UserBaseModel):
     password: str = Field(min_length=8, max_length=25)
     referral_code: str | None = Field(default=None, alias="referralCode")
+    as_affiliate:  bool = Field(default=False, alias="asAffiliate")
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
