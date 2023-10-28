@@ -63,14 +63,20 @@ def task_process_affiliate_code(user_id:  str, affiliate_code: str):
     # get affiliate profile that has the ref code
 
     affiliate_profile = db[Collections.affiliate_profiles].find_one({
-        "referral_code": affiliate_code
+        "referral_codes": {
+
+            "$elemMatch": {
+                "code": affiliate_code
+            }
+
+        }
     })
 
     if not affiliate_profile:
         logger.info(f"Affiliate code {affiliate_code} does not exist")
         raise CancelExecution(retry=False)
 
-    affiliate_profile = UserReferralProfile(**affiliate_profile)
+    affiliate_profile = AffiliateProfile(**affiliate_profile)
 
     # check if the user has already been referred
 
@@ -89,6 +95,9 @@ def task_process_affiliate_code(user_id:  str, affiliate_code: str):
         logger.info(f"User {user_id} has referred themselves")
         raise CancelExecution(retry=False)
 
+    referral_code_obj = next(
+        (x for x in affiliate_profile.referral_codes if x.code == affiliate_code), None)
+
     # create a referral
 
     affiliate_referral = AffiliateReferral(
@@ -96,8 +105,9 @@ def task_process_affiliate_code(user_id:  str, affiliate_code: str):
         referred_user_id=user_id,
         referred_user_email=user.email,
         referred_user_name=user.get_full_name(),
-        referral_code=affiliate_profile.referral_code,
-        referral_link=affiliate_profile.referral_link,
+        referral_code=affiliate_code,
+        referral_code_id=referral_code_obj.uid,
+        referral_link=referral_code_obj.link,
         referral_bonus=settings.affiliate_bonus,
         confirmed=True
     )
@@ -107,9 +117,9 @@ def task_process_affiliate_code(user_id:  str, affiliate_code: str):
 
     # update the referral profile
 
-    affiliate_profile.referral_count += 1
-    affiliate_profile.referral_bonus += settings.affiliate_bonus
-    affiliate_profile.total_referral_bonus += settings.affiliate_bonus
+    referral_code_obj.count += 1
+    referral_code_obj.bonus += settings.affiliate_bonus
+    referral_code_obj.total_bonus += settings.affiliate_bonus
 
     db[Collections.affiliate_profiles].update_one(
         {"user_id": affiliate_profile.user_id}, {"$set": affiliate_profile.model_dump()})

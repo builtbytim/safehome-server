@@ -55,6 +55,7 @@ class Settings(BaseSettings):
     verifyme_secret_key: str = "verifymesecretkey"
     referral_withdrawal_threshold: float = 5000
     referral_bonus: float = 2000
+    affiliate_bonus: float = 2000
     kek: str = "kek"
     kek1: str = "kek1"
     kek2: str = "kek2"
