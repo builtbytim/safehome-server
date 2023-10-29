@@ -197,7 +197,7 @@ async def get_wallet(auth_context: AuthenticationContext = Depends(get_auth_cont
 
 
 @router.get("/transactions", status_code=200, response_model=PaginatedResult)
-async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int = Query(ge=1, default=1), start_date: float | None = Query(alias="startDate", default=None), end_date: float | None = Query(alias="endDate", default=None), tx_type: str = Query(alias="type", default="all"), from_last: FromLastNTime | None = Query(alias="fromLast", default=None),  paid_membership_fee: bool = Depends(only_paid_users),  auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int = Query(ge=1, default=1), start_date: float | None = Query(alias="startDate", default=None), end_date: float | None = Query(alias="endDate", default=None), tx_type: str = Query(alias="type", default="all"), from_last: FromLastNTime | None = Query(alias="fromLast", default=None),  paid_membership_fee: bool = Depends(only_paid_users), match: str = Query(default=""), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")
@@ -208,6 +208,12 @@ async def get_wallet_transactions(page: int = Query(ge=1, default=1), limit: int
     root_filter = {
         "wallet": wallet.uid,
     }
+
+    if match:
+        root_filter.update({"$or": [
+            {"description": {"$regex": match, "$options": "i"}},
+            {"type": {"$regex": match, "$options": "i"}},
+        ]})
 
     filters = {
     }

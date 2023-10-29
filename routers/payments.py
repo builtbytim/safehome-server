@@ -13,7 +13,6 @@ from libs.utils.pure_functions import *
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification, task_process_referral_code, task_process_affiliate_code
 from libs.deps.users import get_auth_context, get_user_wallet
 from libs.logging import Logger
-from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response
 from libs.utils.flutterwave import _initiate_payment, _verify_transaction
 from libs.deps.users import get_auth_context, get_user_wallet
 

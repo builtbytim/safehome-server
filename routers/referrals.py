@@ -91,9 +91,10 @@ async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(
         initiator=auth_context.user.uid,
         wallet=user_wallet.uid,
         fund_source=FundSource.na,
+        type=TransactionType.referral_bonus_deposit,
         description=f"Referral bonus deposit of ₦{amount}",
         balance_after=user_wallet.balance + amount,
-        amount=amount, direction=TransactionDirection.incoming, status=TransactionStatus.successful, type=TransactionType.referral_bonus_deposit)
+        amount=amount, direction=TransactionDirection.incoming, status=TransactionStatus.successful,)
 
     user_wallet.balance += amount
 

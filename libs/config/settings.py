@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     referral_withdrawal_threshold: float = 5000
     referral_bonus: float = 2000
     affiliate_bonus: float = 2000
+    affiliate_withdrawal_threshold: float = 5000
     kek: str = "kek"
     kek1: str = "kek1"
     kek2: str = "kek2"

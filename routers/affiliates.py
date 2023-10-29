@@ -127,3 +127,43 @@ async def get_referrals(auth_context: AuthenticationContext = Depends(get_auth_c
                           True, limit, filters, root_filter=root_filter)
 
     return await paginator.get_paginated_result(page, AffiliateReferral)
+
+
+@router.post("/withdraw", status_code=200, response_model=Transaction)
+async def withdraw_affiliate_bonus(auth_context: AuthenticationContext = Depends(get_auth_context), is_affiliate:  bool = Depends(only_affiliates), user_wallet: Wallet = Depends(get_user_wallet)):
+
+    affiliate_profile:  AffiliateProfile = await find_record(AffiliateProfile, Collections.affiliate_profiles, "user_id", auth_context.user.uid)
+
+    if affiliate_profile.referral_bonus < settings.affiliate_withdrawal_threshold:
+        raise HTTPException(
+            status_code=400, detail="You have not reached the minimum withdrawal threshold!")
+
+    amount = affiliate_profile.referral_bonus
+
+    for referral in affiliate_profile.referral_codes:
+
+        referral.referral_bonus = 0.0
+
+    await _db[Collections.affiliate_profiles].update_one({"user_id": auth_context.user.uid}, {"$set": affiliate_profile.model_dump()})
+
+    # Send email to applicant
+
+    task_send_mail("affiliate_withdrawal", auth_context.user.email,
+                   {"first_name":  auth_context.user.first_name, "amount": amount})
+
+    transaction = Transaction(
+        initiator=auth_context.user.uid,
+        type=TransactionType.affiliate_bonus_deposit,
+        wallet=user_wallet.uid,
+        fund_source=FundSource.na,
+        description=f"Affiliate bonus deposit of ₦{amount}",
+        balance_after=user_wallet.balance + amount,
+        amount=amount, direction=TransactionDirection.incoming, status=TransactionStatus.successful)
+
+    user_wallet.balance += amount
+
+    await _db[Collections.transactions].insert_one(transaction.model_dump())
+
+    await _db[Collections.wallets].update_one({"user_id": auth_context.user.uid}, {"$set": user_wallet.model_dump()})
+
+    return transaction

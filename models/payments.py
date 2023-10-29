@@ -36,6 +36,7 @@ class TransactionType(str, Enum):
     savings_add_funds = "savings_add_funds"
     locked_savings_add_funds = "locked_savings_add_funds"
     referral_bonus_deposit = "referral_bonus_deposit"
+    affiliate_bonus_deposit = "affiliate_bonus_deposit"
 
 
 class TransactionDirection(str, Enum):
