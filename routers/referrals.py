@@ -6,8 +6,9 @@ from libs.db import _db, Collections
 from libs.utils.api_helpers import find_record
 from libs.utils.pure_functions import *
 from models.payments import Transaction, TransactionDirection, FundSource, TransactionStatus, TransactionType
+from models.notifications import NotificationTypes
 from models.wallets import Wallet
-from libs.huey_tasks.tasks import task_send_mail
+from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from libs.deps.users import get_auth_context, only_kyc_verified_users, only_paid_users, get_user_wallet
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.logging import Logger
@@ -101,5 +102,8 @@ async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(
     await _db[Collections.transactions].insert_one(transaction.model_dump())
 
     await _db[Collections.wallets].update_one({"user_id": auth_context.user.uid}, {"$set": user_wallet.model_dump()})
+
+    task_create_notification(
+        auth_context.user.uid, NotificationTypes.referral, "Referral Bonus Deposited", f"We have transferred your referral bonus of {amount}  into your wallet.")
 
     return transaction

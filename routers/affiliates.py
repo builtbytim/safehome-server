@@ -142,7 +142,7 @@ async def withdraw_affiliate_bonus(auth_context: AuthenticationContext = Depends
 
     for referral in affiliate_profile.referral_codes:
 
-        referral.referral_bonus = 0.0
+        referral.bonus = 0.0
 
     await _db[Collections.affiliate_profiles].update_one({"user_id": auth_context.user.uid}, {"$set": affiliate_profile.model_dump()})
 
@@ -165,5 +165,8 @@ async def withdraw_affiliate_bonus(auth_context: AuthenticationContext = Depends
     await _db[Collections.transactions].insert_one(transaction.model_dump())
 
     await _db[Collections.wallets].update_one({"user_id": auth_context.user.uid}, {"$set": user_wallet.model_dump()})
+
+    task_create_notification(
+        auth_context.user.uid, NotificationTypes.affiliate, "Affiliate Bonus Deposited", f"We have transferred your affiliate bonus of {amount}  into your wallet.")
 
     return transaction

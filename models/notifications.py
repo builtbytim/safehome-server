@@ -17,6 +17,7 @@ class NotificationTypes(str, Enum):
     security = "security"
     support = "support"
     referral = "referral"
+    affiliate = "affiliate"
 
 
 class NotificationPreferencesInput(BaseModel):

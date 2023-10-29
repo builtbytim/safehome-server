@@ -39,12 +39,19 @@ async def get_user_notifications_stats(auth_context: AuthenticationContext = Dep
 
 
 @router.get("", status_code=200, response_model=PaginatedResult)
-async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False),  type: NotificationTypes = Query(default="all"), auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_user_notifications(page: int = 1, limit: int = 10, read: bool = Query(default=False),  match: str = Query(default=""), type: NotificationTypes = Query(default="all"), auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     root_filter = {
         "user_id": auth_context.user.uid,
         "deleted":  False
     }
+
+    if match:
+
+        root_filter.update({"$or": [
+            {"body": {"$regex": match, "$options": "i"}},
+            {"notification_type": {"$regex": match, "$options": "i"}},
+        ]})
 
     if type != "all":
         root_filter["notification_type"] = type.value

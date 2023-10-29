@@ -98,14 +98,17 @@ def task_process_affiliate_code(user_id:  str, affiliate_code: str):
     referral_code_obj = next(
         (x for x in affiliate_profile.referral_codes if x.code == affiliate_code), None)
 
+    if not referral_code_obj:
+        logger.info(f"Affiliate code {affiliate_code} does not exist")
+        raise CancelExecution(retry=False)
+
     # create a referral
 
     affiliate_referral = AffiliateReferral(
-        referred_by=affiliate_profile.user_id,
+        affiliate=affiliate_profile.user_id,
         referred_user_id=user_id,
         referred_user_email=user.email,
         referred_user_name=user.get_full_name(),
-        referral_code=affiliate_code,
         referral_code_id=referral_code_obj.uid,
         referral_link=referral_code_obj.link,
         referral_bonus=settings.affiliate_bonus,
