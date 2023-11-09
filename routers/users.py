@@ -90,8 +90,10 @@ async def update_user(body:  UserUpdateModel, paid_membership_fee: bool = Depend
     if body.date_of_birth:
         user.date_of_birth = body.date_of_birth
 
-    user.kyc_info.residential_address = body.residential_address
-    user.kyc_info.state = body.state
+    if user.kyc_info:
+        user.kyc_info.residential_address = body.residential_address
+        user.kyc_info.state = body.state
+
     user.address = body.residential_address
     user.state = body.state
 
