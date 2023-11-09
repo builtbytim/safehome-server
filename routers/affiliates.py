@@ -10,7 +10,7 @@ from models.users import UserRoles
 from models.wallets import Wallet
 from models.notifications import NotificationTypes
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
-from libs.deps.users import get_auth_context, only_kyc_verified_users, only_paid_users, get_user_wallet, only_affiliates
+from libs.deps.users import get_auth_context, only_paid_users, get_user_wallet, only_affiliates
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.logging import Logger
 
@@ -22,7 +22,7 @@ logger = Logger(f"{__package__}.{__name__}")
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Affiliates"], dependencies=[Depends(get_auth_context), Depends(only_kyc_verified_users), Depends(only_paid_users)])
+}, tags=["Affiliates"], dependencies=[Depends(get_auth_context), Depends(only_paid_users)])
 
 
 @router.post("/become", status_code=200)

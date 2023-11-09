@@ -9,7 +9,7 @@ from models.payments import Transaction, TransactionDirection, FundSource, Trans
 from models.notifications import NotificationTypes
 from models.wallets import Wallet
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
-from libs.deps.users import get_auth_context, only_kyc_verified_users, only_paid_users, get_user_wallet
+from libs.deps.users import get_auth_context,  only_paid_users, get_user_wallet
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.logging import Logger
 
@@ -21,7 +21,7 @@ logger = Logger(f"{__package__}.{__name__}")
 
 router = APIRouter(responses={
     404: {"description": "The resource you requested does not exist!"}
-}, tags=["Referrals"], dependencies=[Depends(get_auth_context), Depends(only_kyc_verified_users), Depends(only_paid_users)])
+}, tags=["Referrals"], dependencies=[Depends(get_auth_context), Depends(only_paid_users)])
 
 
 @router.get("/profile", status_code=200, response_model=UserReferralProfileOutput)

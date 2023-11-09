@@ -28,7 +28,7 @@ router = APIRouter(responses={
 
 
 @router.post("/debit-cards", status_code=201, )
-async def add_card(body:  DebitCardInput,  paid_membership_fee: bool = Depends(only_paid_users), kyc_user: bool = Depends(only_kyc_verified_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def add_card(body:  DebitCardInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     card = DebitCard(
         user_id=auth_context.user.uid,
@@ -73,7 +73,7 @@ async def get_cards(auth_context: AuthenticationContext = Depends(get_auth_conte
 
 
 @router.delete("/debit-cards/{card_id}", status_code=200)
-async def delete_card(card_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users), kyc_user: bool = Depends(only_kyc_verified_users)):
+async def delete_card(card_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users)):
 
     card: DebitCard = await find_record(DebitCard, Collections.debitcards, "uid", card_id, raise_404=False)
 
@@ -100,7 +100,7 @@ async def delete_card(card_id: str, auth_context: AuthenticationContext = Depend
 
 
 @router.post("/banks", status_code=201)
-async def add_bank_account(body:  BankAccountInput,  paid_membership_fee: bool = Depends(only_paid_users), kyc_user: bool = Depends(only_kyc_verified_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def add_bank_account(body:  BankAccountInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
 
     account_result = _resolve_bank_account(body.bank_code, body.account_number)
     banks_result = _get_supported_banks()
