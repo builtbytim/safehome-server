@@ -307,10 +307,6 @@ async def password_reset(body:  RequestPasswordResetInput):
         raise HTTPException(
             400, "Account is not active, please contact support.")
 
-    if not user.kyc_status == KYCStatus.APPROVED:
-        raise HTTPException(
-            400, "Your KYC has not been approved, please contact support.")
-
     if get_utc_timestamp() - user.password_reset_at < (60 * 2):
         raise HTTPException(
             400, "Password was recovered recently, please try again later")
@@ -355,10 +351,6 @@ async def password_save(body:  PasswordResetSaveInput):
     if not user.is_active:
         raise HTTPException(
             400, "Your account is not active, please contact support.")
-
-    if not user.kyc_status == KYCStatus.APPROVED:
-        raise HTTPException(
-            400, "Your KYC has not been approved, please contact support.")
 
     reset_store: PasswordResetStore | None = await find_record(PasswordResetStore, Collections.passwordresetstores, "token", body.token, raise_404=False)
 
