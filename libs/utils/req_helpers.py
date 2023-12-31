@@ -10,13 +10,40 @@ logger = Logger(f"{__package__}.{__name__}")
 
 
 class Endpoints(str, Enum):
-    bvn_verification = "https://vapi.verifyme.ng/v1/verifications/identities/bvn"
-    nin_verification = "https://vapi.verifyme.ng/v1/verifications/identities/nin"
+    bvn_verification = "https://api.qoreid.com/v1/ng/identities/bvn-basic"
+    nin_verification = "https://api.qoreid.com/v1/ng/identities/nin"
     flutterwave_payments = "https://api.flutterwave.com/v3/payments"
     flutterwave_tx_verification = "https://api.flutterwave.com/v3/transactions"
     flutterwave_get_banks = "https://api.flutterwave.com/v3/banks"
     flutterwave_resolve_bank_account = "https://api.flutterwave.com/v3/accounts/resolve"
     flutterwave_transfers = "https://api.flutterwave.com/v3/transfers"
+
+
+def handle_response2(ok, status, data, silent=True):
+    if not ok:
+
+        if not silent:
+            raise HTTPException(500, "External API call failed")
+
+    if not (status >= status_codes.HTTP_200_OK and status < status_codes.HTTP_300_MULTIPLE_CHOICES):
+
+        logger.warn("External API call with unhealthy status - " + str(status))
+
+        if not silent:
+            raise HTTPException(500, "External API call error")
+
+        return False
+
+    if status == status_codes.HTTP_401_UNAUTHORIZED:
+
+        logger.warn("External API call with unhealthy status - " + str(status))
+
+        if not silent:
+            raise HTTPException(401, "External API call error")
+
+        return False
+
+    return True
 
 
 def handle_response(ok, status, data, silent=True):

@@ -532,6 +532,20 @@ async def kyc_doc_upload(file: UploadFile = File(...),  paid_membership_fee: boo
     task_initiate_kyc_verification(user.uid)
 
 
+@router.get("/mock-kyc", status_code=200, )
+async def mock_kyc(auth_context:  AuthenticationContext = Depends(get_auth_context)):
+
+    if not settings.debug:
+        raise HTTPException(400, "Not in debug mode")
+
+    user = auth_context.user
+
+    if user.kyc_status == KYCStatus.APPROVED:
+        await _db[Collections.users].update_one({"uid": user.uid}, {"$set": {"kyc_status": KYCStatus.PENDING}})
+
+    task_initiate_kyc_verification(user.uid)
+
+
 """
 
 @router.post("/kyc/document", status_code=200, response_model=AuthCode, response_model_by_alias=True)
