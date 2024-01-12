@@ -64,9 +64,15 @@ EMAIL_DEFS = {
         "mail_from": settings.mail_from,
         "template_name": "joined_waitlist.html",
 
-    }
+    },
 
+    "waitlist_email_confirmation": {
 
+        "subject": "Confirm Your Waitlist Application",
+        "mail_from": settings.mail_from,
+        "template_name": "waitlist_email_confirmation.html",
+
+    },
 
 
 

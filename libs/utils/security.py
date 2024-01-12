@@ -194,7 +194,7 @@ async def validate_totp(totp_uid:  str):
     totp_dict = await _db[Collections.totps].find_one({"uid": totp_uid})
 
     if not totp_dict:
-        raise HTTPException(400, "totp not found")
+        raise HTTPException(400, "Invalid Code, please try again!")
 
     decrypted_key = decrypt(base64.decodebytes(
         totp_dict["key"].encode())).decode()

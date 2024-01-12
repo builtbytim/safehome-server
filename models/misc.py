@@ -9,10 +9,18 @@ from pydantic_settings import SettingsConfigDict
 import phonenumbers
 
 
+class WaitlistEmailConfirmationInput(BaseModel):
+    email:  EmailStr
+
+    model_config = SettingsConfigDict(populate_by_name=True)
+
+
 class WaitlistApplicationInput(BaseModel):
     full_name:  str = Field(min_length=3, alias="fullName")
     email:  EmailStr
-    phone:  str = Field(min_length=10, max_length=15)
+    phone:  str | None = Field(min_length=10, max_length=15, default=None)
+    code: str = Field(min_length=6, max_length=6, )
+    uid: str = Field(min_length=16)
 
     model_config = SettingsConfigDict(populate_by_name=True)
 
