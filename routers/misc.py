@@ -7,6 +7,8 @@ from libs.utils.pure_functions import *
 from libs.huey_tasks.tasks import task_send_mail
 from libs.utils.security import generate_totp, validate_totp
 from models.users import ActionIdentifiers
+from models.investments import InvestibleAsset
+from libs.db import _db, Collections
 
 
 settings = get_settings()
@@ -70,3 +72,31 @@ async def add_waitlist_applicant(body:  WaitlistApplicationInput):
                    {"full_name":  application.full_name})
 
     return {"message": "Application submitted successfully!"}
+
+
+@router.post("/de/assets", status_code=201)
+async def add_de_asset(body:  DEAssetInput, q:  int = 1):
+
+    investment = InvestibleAsset(
+        **body.model_dump(), investor_count=0, cover_image_url=None, asset_image_urls=[])
+
+    dump1 = investment.model_dump()
+
+    g = dump1["props"]["investment_id"]
+
+    for i in range(1, q + 1):
+
+        dump = dump1.copy()
+
+        if i < 10:
+            s = f" 00{i}"
+
+        elif i < 100:
+            s = f" 0{i}"
+
+        dump["props"]["investment_id"] = str(
+            g) + str(s)
+
+        await _db[Collections.investible_assets].insert_one(dump)
+
+    return {"message": "Asset added successfully!"}

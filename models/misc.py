@@ -7,6 +7,7 @@ from time import time
 from libs.config.settings import get_settings
 from pydantic_settings import SettingsConfigDict
 import phonenumbers
+from models.investments import OwnersClubs, AssetProps
 
 
 class WaitlistEmailConfirmationInput(BaseModel):
@@ -50,3 +51,18 @@ class WaitlistApplication(WaitlistApplicationInput):
         except Exception as e:
             raise ValueError("Invalid phone number")
         return v
+
+
+class DEAssetInput(BaseModel):
+    asset_name: str = Field(min_length=3, max_length=64, alias="assetName")
+    location: str | None = Field(min_length=3, max_length=256, default=None)
+    price: float = Field(gt=0.0)
+    units: int = Field(ge=0)
+    duration: str = Field(min_length=3)
+    available_units: int = Field(ge=0, alias="availableUnits", default=0)
+    about: str | None = Field(default=None)
+    owner_club: OwnersClubs = Field(alias="ownerClub")
+
+    props:  AssetProps
+
+    model_config = SettingsConfigDict(populate_by_name=True)

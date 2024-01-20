@@ -35,7 +35,7 @@ class InvestibleAssetBase(BaseModel):
     location: str | None = Field(min_length=3, max_length=256, default=None)
     price: float = Field(gt=0.0)
     units: int = Field(ge=0)
-    duration: float = Field(ge=0, default=0.0)
+    duration: str = Field(min_length=3)
     available_units: int = Field(ge=0, alias="availableUnits", default=0)
     about: str | None = Field(default=None)
     owner_club: OwnersClubs = Field(alias="ownerClub")
@@ -54,7 +54,7 @@ class InvestibleAsset(InvestibleAssetBase):
     investor_count: int = Field(ge=0, alias="investorCount")
     investors: list[str] = Field(default=[], alias="investors")
     cover_image_url: str | None = Field(default=None, alias="coverImageUrl")
-    is_active: bool = Field(default=False, alias="isActive")
+    is_active: bool = Field(default=True, alias="isActive")
     sold_out: bool = Field(default=False, alias="soldOut")
     asset_image_urls: list[str] | None = Field(default=None,
                                                min_length=0, alias="assetImageUrls")
