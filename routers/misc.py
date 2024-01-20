@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from libs.config.settings import get_settings
+from libs.utils.pure_functions import get_uuid4
 from models.misc import *
 from libs.db import _db, Collections
 from libs.utils.api_helpers import find_record
@@ -87,6 +88,8 @@ async def add_de_asset(body:  DEAssetInput, q:  int = 1):
     for i in range(1, q + 1):
 
         dump = dump1.copy()
+
+        dump["uid"] = get_uuid4()
 
         if i < 10:
             s = f" 00{i}"
