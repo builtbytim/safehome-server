@@ -19,6 +19,11 @@ app = FastAPI(
             "description": "Development server"
         },
 
+        {
+            "url": "https://safehome-lil4.onrender.com",
+            "description": "Production server"
+        },
+
     ]
 )
 
