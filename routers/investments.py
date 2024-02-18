@@ -61,7 +61,7 @@ async def get_investible_assets(page: int = 1, limit: int = 10, owners_club:  Ow
         col_name=Collections.investible_assets,
         filters=filters,
         sort_field="asset_name",
-        top_down_sort=True,
+        top_down_sort=False,
         include_crumbs=True,
         per_page=limit,
     )

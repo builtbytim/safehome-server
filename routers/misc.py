@@ -100,6 +100,9 @@ async def add_de_asset(body:  DEAssetInput, q:  int = 1):
         dump["props"]["investment_id"] = str(
             g) + str(s)
 
+        dump["asset_name"] = str(
+            g) + str(s)
+
         await _db[Collections.investible_assets].insert_one(dump)
 
     return {"message": "Asset added successfully!"}
