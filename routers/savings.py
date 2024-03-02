@@ -142,7 +142,7 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
 
         if user_wallet.balance < body.amount_to_add:
             raise HTTPException(status_code=400,
-                                detail="You do not have enough balance to fund this savings plan.")
+                                detail="You do not have enough balance to fund this savings plan.", headers={"X-ACTION": "FUND_ACCOUNT"})
 
         transaction.balance_after = user_wallet.balance - body.amount_to_add
 

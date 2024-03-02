@@ -119,7 +119,7 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 
         if user_wallet.balance < amount:
             raise HTTPException(status_code=400,
-                                detail=f"You do not have enough funds in your wallet to make this investment. Please add funds to your wallet and try again.")
+                                detail=f"You do not have enough funds in your wallet to make this investment. Please add funds to your wallet and try again.", headers={"X-ACTION": "FUND_ACCOUNT"})
 
         transaction.tx_id = get_uuid4()
         transaction.status = TransactionStatus.successful
