@@ -14,7 +14,7 @@ media
 .vscode
 ./vscode
 
-
+.env-prod
 huey.db
 huey.db-shm
 huey.db-wal

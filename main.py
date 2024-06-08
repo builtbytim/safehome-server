@@ -20,7 +20,7 @@ app = FastAPI(
         },
 
         {
-            "url": "https://safehome-lil4.onrender.com",
+            "url": "http://safehome-env.af-south-1.elasticbeanstalk.com",
             "description": "Production server"
         },
 
