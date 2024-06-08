@@ -1,0 +1,1 @@
+web: huey_consumer.py main.huey -w 6 -q & gunicorn main:app --workers=4 --worker-class=uvicorn.workers.UvicornWorker
