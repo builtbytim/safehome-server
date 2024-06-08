@@ -8,16 +8,27 @@ from libs.huey_tasks.tasks import task_send_mail, task_test_huey,  task_initiate
 settings = get_settings()
 
 
-app = FastAPI(
-    title=settings.app_name,
-    debug=settings.debug,
-    version="0.1.0",
-    servers=[
+servers = None
+
+
+if settings.debug:
+
+    servers = [
 
         {
             "url": "http://localhost:7000",
             "description": "Development server"
         },
+
+
+
+    ]
+
+
+else:
+
+    servers = [
+
 
         {
             "url": "http://safehome-env.af-south-1.elasticbeanstalk.com",
@@ -25,6 +36,13 @@ app = FastAPI(
         },
 
     ]
+
+
+app = FastAPI(
+    title=settings.app_name,
+    debug=settings.debug,
+    version="0.1.0",
+    servers=servers
 )
 
 # CSRF config
