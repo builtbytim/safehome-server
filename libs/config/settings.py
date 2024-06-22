@@ -70,6 +70,7 @@ class Settings(BaseSettings):
         "https://safehomecoop.com", "https://www.safehomecoop.com", "https://app.safehomecoop.com", "https://safehomecoop-affiliates.vercel.app",
         "https://main.d259adcvsfh045.amplifyapp.com",
         "https://affiliates.safehomecoop.com",
+        "https://partners.safehomecoop.com",
         "http://localhost:3000", "http://0.0.0.0:3000", "http://localhost:3001", "https://safehome-gg.vercel.app", "https://app.safehome.timmypelumy.dev", "https://safehome.timmypelumy.dev"]
 
 
