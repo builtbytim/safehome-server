@@ -9,7 +9,7 @@ from models.payments import Transaction, TransactionDirection, FundSource, Trans
 from models.notifications import NotificationTypes
 from models.wallets import Wallet
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
-from libs.deps.users import get_auth_context,  only_paid_users, get_user_wallet
+from libs.deps.users import get_auth_context,  only_paid_users, get_user_wallet, only_kyc_verified_users
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.logging import Logger
 
@@ -69,7 +69,7 @@ async def get_referrals(auth_context: AuthenticationContext = Depends(get_auth_c
 
 
 @router.post("/withdraw", status_code=200, response_model=Transaction)
-async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
+async def withdraw_referral_bonus(auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet), kyced: bool = Depends(only_kyc_verified_users)):
 
     referral_profile:  UserReferralProfile = await find_record(UserReferralProfile, Collections.referral_profiles, "user_id", auth_context.user.uid)
 

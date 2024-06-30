@@ -29,7 +29,7 @@ router = APIRouter(responses={
 async def enable_affiliate_on_account(auth_context: AuthenticationContext = Depends(get_auth_context)):
 
     if auth_context.user.role == UserRoles.AFFILIATE:
-        return
+        return {"message": "You are already an affiliate!"}
 
     else:
         auth_context.user.role = UserRoles.AFFILIATE
@@ -42,7 +42,7 @@ async def enable_affiliate_on_account(auth_context: AuthenticationContext = Depe
         task_create_notification(
             auth_context.user.uid, NotificationTypes.account, "Your account has been enabled for affiliates.", "Your account has been enabled for affiliates. You can now start referring people to the platform and earn commissions.")
 
-        return
+        return {"message": "You have successfully enabled your account for affiliates!"}
 
 
 @router.get("/profile", status_code=200, response_model=AffiliateProfileOutput)

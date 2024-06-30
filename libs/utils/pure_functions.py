@@ -25,7 +25,7 @@ def get_uuid4():
 
 
 def get_complex_id():
-    return os.urandom(16).hex()
+    return os.urandom(10).hex()
 
 
 def get_simple_id():

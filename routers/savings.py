@@ -13,7 +13,7 @@ from libs.utils.pure_functions import *
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from models.notifications import NotificationTypes
-from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users
+from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users, only_kyc_verified_users
 from libs.logging import Logger
 from datetime import timedelta
 import math
@@ -37,7 +37,7 @@ def calculate_savings_plan_cycles(start_date: float, end_date: float, interval: 
 
 # create goal savings plan
 @router.post("/goals", status_code=200, response_model=GoalSavingsPlan)
-async def create_goal_savings_plan(body:  GoalSavingsPlanInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users)):
+async def create_goal_savings_plan(body:  GoalSavingsPlanInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyced: bool = Depends(only_kyc_verified_users)):
 
     if not user_wallet:
         raise HTTPException(status_code=400,
@@ -95,7 +95,7 @@ async def get_my_goal_savings_plans(auth_context:  AuthenticationContext = Depen
 
 # fund a goal savings
 @router.post("/goals/fund", status_code=200, response_model=TopupOutput | None)
-async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users)):
+async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyced: bool = Depends(only_kyc_verified_users)):
 
     savings_plan: GoalSavingsPlan = await find_record(GoalSavingsPlan, Collections.goal_savings_plans, "uid", body.savings_id)
 
@@ -206,7 +206,7 @@ async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  Authent
 
 # create locked savings plan
 @router.post("/locked", status_code=200, response_model=LockedSavingsPlan)
-async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users)):
+async def create_locked_savings_plan(body:  LockedSavingsPlanInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyced: bool = Depends(only_kyc_verified_users)):
 
     if not user_wallet:
         raise HTTPException(status_code=400,
@@ -305,7 +305,7 @@ async def get_my_locked_savings_plans(auth_context:  AuthenticationContext = Dep
 
 # fund a locked savings
 @router.post("/locked/fund", status_code=200, response_model=TopupOutput | None)
-async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users)):
+async def fund_goal_savings_plan(body:  FundSavingsInput, auth_context:  AuthenticationContext = Depends(get_auth_context), user_wallet:  Wallet = Depends(get_user_wallet), paid_user:  bool = Depends(only_paid_users), kyced: bool = Depends(only_kyc_verified_users)):
 
     savings_plan: LockedSavingsPlan = await find_record(LockedSavingsPlan, Collections.locked_savings_plans, "uid", body.savings_id)
 

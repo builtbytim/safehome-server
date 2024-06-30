@@ -8,7 +8,7 @@ from libs.utils.api_helpers import update_record, find_record, _validate_email_f
 from libs.huey_tasks.tasks import task_send_mail, task_initiate_kyc_verification, task_post_user_registration, task_create_notification
 from models.notifications import NotificationTypes
 from libs.utils.security import generate_totp, validate_totp, encode_to_base64, scrypt_verify, _create_access_token
-from libs.deps.users import get_auth_context, get_auth_code, only_paid_users
+from libs.deps.users import get_auth_context, get_auth_code, only_paid_users, only_kyc_verified_users
 from fastapi.security import OAuth2PasswordRequestForm
 from libs.utils.security import encrypt, encrypt_string
 from libs.cloudinary.uploader import upload_image
@@ -406,7 +406,7 @@ async def get_next_of_kin(paid_membership_fee: bool = Depends(only_paid_users), 
 
 
 @router.post("/next-of-kin", status_code=200)
-async def set_next_of_kin(body:  NextOfKinInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def set_next_of_kin(body:  NextOfKinInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context), ):
     user: UserDBModel = auth_context.user
 
     next_of_kin = NextOfKinInfo(**body.model_dump(), user_id=user.uid)
@@ -436,7 +436,7 @@ async def set_next_of_kin(body:  NextOfKinInput,  paid_membership_fee: bool = De
 
 
 @router.post("/security-questions", status_code=200)
-async def set_security_questions(body:  UserSecurityQuestionsInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context)):
+async def set_security_questions(body:  UserSecurityQuestionsInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context:  AuthenticationContext = Depends(get_auth_context), ):
     user: UserDBModel = auth_context.user
 
     input_data = UserSecurityQuestions(question1=body.question1, question2=body.question2, answer1=encrypt(

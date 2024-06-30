@@ -28,7 +28,7 @@ router = APIRouter(responses={
 
 
 @router.post("/debit-cards", status_code=201, )
-async def add_card(body:  DebitCardInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def add_card(body:  DebitCardInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet), kyced: bool = Depends(only_kyc_verified_users)):
 
     card = DebitCard(
         user_id=auth_context.user.uid,
@@ -73,7 +73,7 @@ async def get_cards(auth_context: AuthenticationContext = Depends(get_auth_conte
 
 
 @router.delete("/debit-cards/{card_id}", status_code=200)
-async def delete_card(card_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users)):
+async def delete_card(card_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users), kyced: bool = Depends(only_kyc_verified_users)):
 
     card: DebitCard = await find_record(DebitCard, Collections.debitcards, "uid", card_id, raise_404=False)
 
@@ -100,7 +100,7 @@ async def delete_card(card_id: str, auth_context: AuthenticationContext = Depend
 
 
 @router.post("/banks", status_code=201)
-async def add_bank_account(body:  BankAccountInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def add_bank_account(body:  BankAccountInput,  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet), kyced: bool = Depends(only_kyc_verified_users)):
 
     account_result = _resolve_bank_account(body.bank_code, body.account_number)
     banks_result = _get_supported_banks()
@@ -153,7 +153,7 @@ async def resolve_bank_account(body: BankAccountInput,  auth_context: Authentica
 
 
 @router.delete("/banks/{bank_id}", status_code=200)
-async def delete_bank_account(bank_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users)):
+async def delete_bank_account(bank_id: str, auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet),  paid_membership_fee: bool = Depends(only_paid_users), kyced: bool = Depends(only_kyc_verified_users)):
 
     bank_account: BankAccount = await find_record(BankAccount, Collections.bank_accounts, "uid", bank_id, raise_404=False)
 
@@ -286,7 +286,7 @@ async def get_wallet_transaction(tx_ref: str, paid_membership_fee: bool = Depend
 
 
 @router.post("/withdraw", status_code=200)
-async def withdraw_from_wallet(body:  WithdrawalInput, kyced: bool = Depends(only_kyc_verified_users),  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet)):
+async def withdraw_from_wallet(body:  WithdrawalInput, kyced: bool = Depends(only_kyc_verified_users),  paid_membership_fee: bool = Depends(only_paid_users), auth_context: AuthenticationContext = Depends(get_auth_context), wallet:  Wallet = Depends(get_user_wallet), ):
 
     if not wallet:
         logger.error(f"User {auth_context.user.uid} does not have a wallet")

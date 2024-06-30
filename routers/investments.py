@@ -12,7 +12,7 @@ from libs.utils.pure_functions import *
 from libs.utils.pagination import Paginator, PaginatedResult
 from libs.huey_tasks.tasks import task_send_mail, task_create_notification
 from models.notifications import NotificationTypes
-from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users
+from libs.deps.users import get_auth_context, get_user_wallet, only_paid_users, only_kyc_verified_users
 from libs.logging import Logger
 
 logger = Logger(f"{__package__}.{__name__}")
@@ -28,6 +28,10 @@ router = APIRouter(responses={
 
 @router.post("/investibles", status_code=200, response_model=InvestibleAsset)
 async def create_investible_asset(body: InvestibleAssetInput, auth_context: AuthenticationContext = Depends(get_auth_context), user_wallet: Wallet = Depends(get_user_wallet)):
+
+    if not settings.debug:
+        raise HTTPException(status_code=400,
+                            detail="Investments are currently disabled. Please try again later.")
 
     if not user_wallet:
         raise HTTPException(status_code=400,
@@ -174,7 +178,7 @@ async def create_investment(body: InvestmentInput, auth_context: AuthenticationC
 
 
 @router.get("/investments", status_code=200, response_model=PaginatedResult)
-async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), completed: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context)):
+async def get_my_investments(page: int = 1, limit: int = 10, owners_club:  OwnersClubs = Query(default=OwnersClubs.all, alias="ownersClub"), include_asset: bool = Query(alias="includeAsset", default=True), completed: bool = Query(default=False), auth_context: AuthenticationContext = Depends(get_auth_context), ):
 
     root_filter = {
         "investor_uid": auth_context.user.uid,

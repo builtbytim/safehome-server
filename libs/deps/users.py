@@ -126,16 +126,16 @@ async def only_affiliates(context:  AuthenticationContext = Depends(get_auth_con
 async def only_kyc_verified_users(context: AuthenticationContext | None = Depends(get_auth_context_optionally)):
 
     if context is None:
-        return
+        return False
 
     if not context.user.kyc_status == KYCStatus.APPROVED:
         if context.user.kyc_status == KYCStatus.PENDING:
             raise HTTPException(
-                status_code=400, detail="Your KYC is still pending, you cannot perform this action.")
+                status_code=400, detail="Your KYC is still pending, your account is temporarily restricted.")
         else:
 
             raise HTTPException(
-                status_code=400, detail="You must submit your KYC information to perform this action.", headers={"X-ACTION": "VERIFY_KYC"})
+                status_code=400, detail="You must submit your KYC information to get access to all services.", headers={"X-ACTION": "VERIFY_KYC"})
 
     return True
 
