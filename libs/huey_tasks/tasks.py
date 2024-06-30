@@ -6,16 +6,18 @@ from libs.logging import Logger
 from libs.db import Collections
 from models.wallets import Wallet
 from models.referrals import Referral, UserReferralProfile
-from models.affiliates import AffiliateLevel, AffiliateReferralCodeOutput, AffiliateProfile, AffiliateProfileOutput, AffiliateReferral, AffiliateReferralCode
+from models.affiliates import AffiliateProfile, AffiliateReferral
 from huey.exceptions import CancelExecution
 from huey import crontab
 from models.notifications import Notification, NotificationTypes
 from .utils import exp_backoff_task
 from .config import huey
 from libs.emails.send_email import dispatch_email
-from libs.utils.req_helpers import handle_response, make_req, make_url, Endpoints, handle_response2
+from libs.utils.req_helpers import make_req, make_url, Endpoints, handle_response2
 from models.users import UserDBModel, KYCDocumentType, KYCStatus
 from libs.utils.security import decrypt
+from datetime import datetime
+import json
 
 
 logger = Logger(f"{__package__}.{__name__}")
@@ -28,8 +30,39 @@ db = client[settings.db_name]
 
 OTP_TYPE = "otp"
 
+quore_id_api_token = None
 
-# Task to test the huey consumer
+
+@huey.on_startup()
+def load_resources():
+
+    global quore_id_api_token
+
+    url = make_url(settings.quore_id_api_url, "/token")
+
+    ok, status, data = make_req(
+        url, "POST", {
+            'Content-Type': 'application/json'
+        }, {
+            "clientId":  settings.quore_id_client_id,
+            "secret": settings.quore_id_secret_key
+        }
+    )
+
+    success = handle_response2(ok, status, data)
+
+    if not success:
+        logger.critical("\n Failed to get QUORE ID TOKEN ")
+
+    else:
+
+        quore_id_api_token = data["accessToken"]
+        logger.info("\n Fetched QUORE ID TOKEN successfully ")
+
+        if settings.debug:
+            print("Quore ID Details: ", data)
+
+
 @huey.task(retries=3,  retry_delay=20, name="task_test_huey")
 def task_test_huey():
 
@@ -43,7 +76,7 @@ def task_test_huey():
 
 
 # Task to process affiliate code
-@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+@exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=45)
 def task_process_affiliate_code(user_id:  str, affiliate_code: str):
 
     # get user
@@ -124,12 +157,26 @@ def task_process_affiliate_code(user_id:  str, affiliate_code: str):
     referral_code_obj.bonus += settings.affiliate_bonus
     referral_code_obj.total_bonus += settings.affiliate_bonus
 
+    # special bonus for 10, 100 and 250 referrals
+
+    if referral_code_obj.count == 10:
+        referral_code_obj.bonus += 20000
+        referral_code_obj.total_bonus += 20000
+
+    elif referral_code_obj.count == 100:
+        referral_code_obj.bonus += 200000
+        referral_code_obj.total_bonus += 200000
+
+    elif referral_code_obj.count == 250:
+        referral_code_obj.bonus += 500000
+        referral_code_obj.total_bonus += 500000
+
     db[Collections.affiliate_profiles].update_one(
         {"user_id": affiliate_profile.user_id}, {"$set": affiliate_profile.model_dump()})
 
 
 # Task to process referral code
-@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+@exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=45)
 def task_process_referral_code(user_id:  str, referralCode: str):
 
     # get user
@@ -201,7 +248,7 @@ def task_process_referral_code(user_id:  str, referralCode: str):
 
 
 # Task to execute  additional actions after a successful user registration
-@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+@exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=45)
 def task_post_user_registration(user_id:  str):
 
     logger.info(f"Executing post-registration actions for user {user_id}")
@@ -229,7 +276,7 @@ def task_post_user_registration(user_id:  str):
 
 # Task to create a notification for a user
 
-@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+@exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=15)
 def task_create_notification(user_id:  str, notification_type:  NotificationTypes,  title:  str, body:  str, ):
 
     logger.info(
@@ -251,7 +298,7 @@ def task_create_notification(user_id:  str, notification_type:  NotificationType
 
 # Task to send an email
 
-@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=5)
+@exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=45)
 def task_send_mail(email_type:  str, email_to:  EmailStr | list[EmailStr], email_data:  dict):
 
     logger.info(f"Sending email of type {email_type} to {email_to}")
@@ -261,8 +308,14 @@ def task_send_mail(email_type:  str, email_to:  EmailStr | list[EmailStr], email
 
 # Task to initiate kyc verification
 
-@exp_backoff_task(retries=10, retry_backoff=1.15, retry_delay=15)
+@exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=45)
 def task_initiate_kyc_verification(user_id:  str):
+
+    global quore_id_api_token
+
+    if quore_id_api_token is None:
+        logger.critical(f"QUORE ID TOKEN is not ready!!!")
+        raise CancelExecution(retry=False)
 
     logger.info(f"Initiating KYC verification for user {user_id}")
 
@@ -273,13 +326,8 @@ def task_initiate_kyc_verification(user_id:  str):
 
     user_db = UserDBModel(**user)
 
-    # Update the user's kyc status
-    db[Collections.users].update_one(
-        {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED.value}})
-
-    # Send an email to the user
-    task_send_mail("kyc_approved", user["email"], {
-        "first_name": user["first_name"]})
+    dob = datetime.fromtimestamp(
+        user_db.date_of_birth).strftime("%Y-%m-%d")
 
     if user["kyc_status"] == KYCStatus.APPROVED.value:
         logger.info(f"User {user_id} has already been verified")
@@ -289,31 +337,179 @@ def task_initiate_kyc_verification(user_id:  str):
         logger.info(f"User {user_id} has not been marked for KYC verification")
         raise CancelExecution(retry=False)
 
-    if user_db.kyc_info.document_type == KYCDocumentType.BVN:
+    approved = False
+    failure_reason = ""
 
-        decrypted_bvn = decrypt(bytes.fromhex(user_db.kyc_info.BVN)).decode()
+    decrypted_bvn = decrypt(bytes.fromhex(user_db.kyc_info.BVN)).decode()
 
-        body = {
-            "firstname": user_db.first_name,
-            "lastname": user_db.last_name,
-            "dob": user_db.date_of_birth,
-            "gender":  user_db.gender
-        }
+    body = {
+        "firstname": user_db.first_name,
+        "lastname": user_db.last_name,
+        "dob": dob,
+        "gender":  user_db.gender,
+        "phone": user_db.phone,
+    }
 
-        url = make_url(Endpoints.bvn_verification.value,
-                       surfix=f"/{decrypted_bvn}")
+    url = make_url(Endpoints.bvn_verification.value,
+                   surfix=f"/{decrypted_bvn}")
 
-        # Make the request to the KYC API
-        ok, status, data = make_req(
-            method="POST", url=url, body=body, headers={
-                "Authorization": f"Bearer {settings.quore_id_api_token}"
-            })
+    # Make the request to the KYC API
+    ok, status, data = make_req(
+        method="POST", url=url, body=body, headers={
+            "Authorization": f"Bearer {quore_id_api_token}"
+        })
 
-        success = handle_response2(ok, status, data)
+    success = handle_response2(ok, status, data)
 
-        if not success:
-            logger.info(
-                f"KYC verification request for user {user_id} failed - {ok} {status} {data}")
+    if not success:
+
+        reason = str(data) if type(data) != "str" else data
+
+        try:
+            t = json.loads(reason)
+            reason = t["message"]
+
+        except:
+            pass
+
+        # Update the user's kyc status
+        db[Collections.users].update_one(
+            {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.REJECTED}})
+
+        # Send an email to the user
+        task_send_mail("kyc_rejected", user["email"], {
+            "first_name": user["first_name"], "reason":  reason})
+
+        logger.info(
+            f"KYC verification request for user {user_id} failed - {ok} {status} {data}")
+
+        raise CancelExecution(retry=True)
+
+    bvn_summary = data["summary"]
+    # bvn_status = bvn_summary["status"]
+
+    field_matches = bvn_summary["bvn_match_check"]["fieldMatches"]
+
+    unmatched_fields = []
+
+    if field_matches["firstname"] == False:
+        unmatched_fields.append("First Name")
+
+    if field_matches["lastname"] == False:
+        unmatched_fields.append("Last Name")
+
+    if len(unmatched_fields) > 0:
+
+        reason = "The details you provided do not match the details on your BVN. The following fields do not match: " + \
+            ", ".join(unmatched_fields)
+
+        failure_reason = reason
+
+        # # Update the user's kyc status
+        # db[Collections.users].update_one(
+        #     {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.REJECTED}})
+
+        # # Send an email to the user
+        # task_send_mail("kyc_rejected", user["email"], {
+        #     "first_name": user["first_name"], "reason":  reason})
+
+    else:
+
+        approved = True
+
+        # # Update the user's kyc status
+        # db[Collections.users].update_one(
+        #     {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED}})
+
+        # # Send an email to the user
+        # task_send_mail("kyc_approved", user["email"], {
+        #     "first_name": user["first_name"], })
+
+    decrypted_nin = decrypt(bytes.fromhex(
+        user_db.kyc_info.IDNumber)).decode()
+
+    body = {
+        "firstname": user_db.first_name,
+        "lastname": user_db.last_name,
+        "dob": dob,
+        "gender":  user_db.gender
+
+    }
+
+    url = make_url(Endpoints.nin_verification.value,
+                   surfix=f"/{decrypted_nin}")
+
+    # Make the request to the KYC API
+    ok, status, data = make_req(
+        url, "POST",  body=body, headers={
+            "Authorization": f"Bearer {quore_id_api_token}"
+        })
+
+    success = handle_response2(ok, status, data)
+
+    if not success:
+
+        reason = str(data) if type(data) != "str" else data
+
+        try:
+            t = json.loads(reason)
+            reason = t["message"]
+
+        except:
+            pass
+
+        # Update the user's kyc status
+        db[Collections.users].update_one(
+            {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.REJECTED}})
+
+        # Send an email to the user
+        task_send_mail("kyc_rejected", user["email"], {
+            "first_name": user["first_name"], "reason":  reason})
+
+        logger.info(
+            f"KYC verification request for user {user_id} failed - {ok} {status} {data}")
+
+        raise CancelExecution(retry=False)
+
+    nin_summary = data["summary"]
+    # nin_status = nin_summary["status"]
+
+    field_matches = nin_summary["nin_check"]["fieldMatches"]
+
+    unmatched_fields = []
+
+    if field_matches["firstname"] == False:
+        unmatched_fields.append("First Name")
+
+    if field_matches["lastname"] == False:
+        unmatched_fields.append("Last Name")
+
+    if field_matches["gender"] == False:
+        unmatched_fields.append("Gender")
+
+    if field_matches["dob"] == False:
+        unmatched_fields.append("Date of Birth")
+
+    if len(unmatched_fields) > 0:
+
+        reason = "1. The details you provided do not match the details on your NIN. The following fields do not match: " + \
+            ", ".join(unmatched_fields)
+
+        if failure_reason:
+
+            reason += f"   2. {failure_reason}"
+
+        # Update the user's kyc status
+        db[Collections.users].update_one(
+            {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.REJECTED}})
+
+        # Send an email to the user
+        task_send_mail("kyc_rejected", user["email"], {
+            "first_name": user["first_name"], "reason":  reason})
+
+    else:
+
+        if not approved:
 
             # Update the user's kyc status
             db[Collections.users].update_one(
@@ -321,94 +517,14 @@ def task_initiate_kyc_verification(user_id:  str):
 
             # Send an email to the user
             task_send_mail("kyc_rejected", user["email"], {
-                "first_name": user["first_name"], "reason": "verification faield"})
+                "first_name": user["first_name"], "reason":  failure_reason})
 
-            raise CancelExecution(retry=False)
-
-        bvn_summary = data["summary"]
-        bvn_status = data["status"]
-
-        if bvn_status == "verified":
-            logger.info(f"KYC verification for user {user_id} successful")
+        else:
 
             # Update the user's kyc status
             db[Collections.users].update_one(
-                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED.value}})
+                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED}})
 
             # Send an email to the user
             task_send_mail("kyc_approved", user["email"], {
-                "first_name": user["first_name"]})
-
-        else:
-            logger.info(f"KYC verification for user {user_id} failed")
-
-            # Update the user's kyc status
-            db[Collections.users].update_one(
-                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.REJECTED}})
-
-            # Send an email to the user
-            task_send_mail("kyc_rejected", user["email"], {
-                "first_name": user["first_name"], "reason":  "The details you provided do not match the details on your BVN"})
-
-    elif user_db.kyc_info.document_type == KYCDocumentType.NIN:
-        decrypted_nin = decrypt(bytes.fromhex(
-            user_db.kyc_info.IDNumber)).decode()
-
-        body = {
-            "firstname": user_db.first_name,
-            "lastname": user_db.last_name,
-            "dob": user_db.date_of_birth,
-            "gender":  user_db.gender
-
-        }
-
-        url = make_url(Endpoints.nin_verification.value,
-                       surfix=f"/{decrypted_nin}")
-
-        # Make the request to the KYC API
-        ok, status, data = make_req(
-            url, "POST",  body=body, headers={
-                "Authorization": f"Bearer {settings.quore_id_api_token}"
-            })
-
-        success = handle_response2(ok, status, data)
-
-        if not success:
-            logger.info(
-                f"KYC verification request for user {user_id} failed - {ok} {status} {data}")
-
-            # Update the user's kyc status
-            db[Collections.users].update_one(
-                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.REJECTED}})
-
-            # Send an email to the user
-            task_send_mail("kyc_rejected", user["email"], {
-                "first_name": user["first_name"], "reason": "verification faield"})
-
-            raise CancelExecution(retry=False)
-
-        nin_summary = data["summary"]
-        nin_status = data["status"]
-
-        if nin_status == "verified":
-            logger.info(f"KYC verification for user {user_id} successful")
-
-            # Update the user's kyc status
-            db[Collections.users].update_one(
-                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED.value}})
-
-            # Send an email to the user
-            task_send_mail("kyc_approved", user["email"], {
-                "first_name": user["first_name"]})
-
-        else:
-
-            logger.info(f"KYC verification for user {user_id} failed")
-
-            # Update the user's kyc status
-            db[Collections.users].update_one(
-                {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.REJECTED}})
-
-            # Send an email to the user
-            task_send_mail("kyc_rejected", user["email"], {
-                "first_name": user["first_name"], "reason":  "The details you provided do not match the details on your NIN"})
+                "first_name": user["first_name"], })

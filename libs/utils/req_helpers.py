@@ -10,7 +10,7 @@ logger = Logger(f"{__package__}.{__name__}")
 
 
 class Endpoints(str, Enum):
-    bvn_verification = "https://api.qoreid.com/v1/ng/identities/bvn-basic"
+    bvn_verification = "https://api.qoreid.com/v1/ng/identities/bvn-match"
     nin_verification = "https://api.qoreid.com/v1/ng/identities/nin"
     flutterwave_payments = "https://api.flutterwave.com/v3/payments"
     flutterwave_tx_verification = "https://api.flutterwave.com/v3/transactions"
@@ -104,10 +104,12 @@ def make_req(url, method, headers={}, body=None):
 
     if not ok:
 
-        logger.critical("External API Call with url " + url +
-                        " Failed with status " + str(status) + " and details " + response.text)
+        t = response.text
 
-        return ok, status, None
+        logger.critical("External API Call with url " + url +
+                        " Failed with status " + str(status) + " and details " + t)
+
+        return ok, status, t
 
     data = response.json()
 

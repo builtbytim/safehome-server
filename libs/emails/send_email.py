@@ -22,8 +22,8 @@ def dispatch_email(email_to: list[EmailStr] | EmailStr, email_type: str, email_d
 
     try:
 
-        with smtplib.SMTP(settings.mail_server, settings.mail_port) as smtp:
-            smtp.starttls()
+        with smtplib.SMTP_SSL(settings.mail_server, settings.mail_port) as smtp:
+            # smtp.starttls()
             smtp.login(settings.mail_username, settings.mail_password)
             email_content = render_to_string(
                 conf['template_name'], **email_data)
