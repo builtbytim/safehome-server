@@ -10,7 +10,7 @@ EMAIL_DEFS = {
     },
 
     'verify_email_done': {
-        'subject': "Email Confirmed",
+        'subject': "Welcome Onboard!",
         'mail_from': settings.mail_from,
         'template_name': "verify_email_done.html",
     },
