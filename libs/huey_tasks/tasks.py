@@ -30,13 +30,10 @@ db = client[settings.db_name]
 
 OTP_TYPE = "otp"
 
-quore_id_api_token = None
 
+def load_quore_id_api_token():
 
-@huey.on_startup()
-def load_resources():
-
-    global quore_id_api_token
+    token = None
 
     url = make_url(settings.quore_id_api_url, "/token")
 
@@ -56,11 +53,13 @@ def load_resources():
 
     else:
 
-        quore_id_api_token = data["accessToken"]
+        token = data["accessToken"]
         logger.info("\n Fetched QUORE ID TOKEN successfully ")
 
         if settings.debug:
             print("Quore ID Details: ", data)
+
+    return token
 
 
 @huey.task(retries=3,  retry_delay=20, name="task_test_huey")
@@ -311,7 +310,7 @@ def task_send_mail(email_type:  str, email_to:  EmailStr | list[EmailStr], email
 @exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=45)
 def task_initiate_kyc_verification(user_id:  str):
 
-    global quore_id_api_token
+    quore_id_api_token = load_quore_id_api_token()
 
     if quore_id_api_token is None:
         logger.critical(f"QUORE ID TOKEN is not ready!!!")
