@@ -391,10 +391,10 @@ def task_initiate_kyc_verification(user_id:  str):
 
     unmatched_fields = []
 
-    if field_matches["firstname"] == False:
+    if not field_matches.get("firstname", None):
         unmatched_fields.append("First Name")
 
-    if field_matches["lastname"] == False:
+    if not field_matches.get("lastname", None):
         unmatched_fields.append("Last Name")
 
     if len(unmatched_fields) > 0:
@@ -477,17 +477,18 @@ def task_initiate_kyc_verification(user_id:  str):
 
     unmatched_fields = []
 
-    if field_matches["firstname"] == False:
+    if not field_matches.get("firstname", None):
         unmatched_fields.append("First Name")
 
-    if field_matches["lastname"] == False:
+    if not field_matches.get("lastname", None):
         unmatched_fields.append("Last Name")
 
-    if field_matches["gender"] == False:
+    if not field_matches.get("gender", None):
         unmatched_fields.append("Gender")
 
-    if field_matches["dob"] == False:
-        unmatched_fields.append("Date of Birth")
+    if "dob" in field_matches:
+        if not field_matches["dob"]:
+            unmatched_fields.append("Date of Birth")
 
     if len(unmatched_fields) > 0:
 
