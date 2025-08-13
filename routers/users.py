@@ -44,6 +44,8 @@ async def user_sign_up(response:  Response, body:  UserInputModel):
         **user_dict, uid=prospective_id, password_hash=password_hash
     )
 
+    user_db.has_paid_membership_fee = True
+
     # save into data base
     await _db[Collections.users].insert_one(user_db.model_dump())
 
