@@ -69,6 +69,8 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = [
         "https://safehomecoop.com", "https://www.safehomecoop.com", "https://app.safehomecoop.com", "https://safehomecoop-affiliates.vercel.app",
         "https://main.d259adcvsfh045.amplifyapp.com",
+        "https://propvest-landing.netlify.app",
+        "https://propvest-app.netlify.app",
         "https://affiliates.safehomecoop.com",
         "https://partners.safehomecoop.com",
         "http://localhost:3000", "https://safehome-app.netlify.app", "http://localhost:3001", "https://safehome-gg.vercel.app", "https://safehome-landing-page.netlify.app", "https://safehome.timmypelumy.dev"]
