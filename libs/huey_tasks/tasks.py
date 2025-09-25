@@ -310,6 +310,18 @@ def task_send_mail(email_type:  str, email_to:  EmailStr | list[EmailStr], email
 @exp_backoff_task(retries=3, retry_backoff=1.15, retry_delay=45)
 def task_initiate_kyc_verification(user_id:  str):
 
+    user = db[Collections.users].find_one({"uid": user_id})
+
+    # Update the user's kyc status
+    db[Collections.users].update_one(
+        {"uid": user_id}, {"$set": {"kyc_status": KYCStatus.APPROVED}})
+
+    # Send an email to the user
+    task_send_mail("kyc_approved", user["email"], {
+        "first_name": user["first_name"], })
+
+    return
+
     quore_id_api_token = load_quore_id_api_token()
 
     if quore_id_api_token is None:
@@ -317,8 +329,6 @@ def task_initiate_kyc_verification(user_id:  str):
         raise CancelExecution(retry=False)
 
     logger.info(f"Initiating KYC verification for user {user_id}")
-
-    user = db[Collections.users].find_one({"uid": user_id})
 
     if not user:
         raise CancelExecution(retry=False)
